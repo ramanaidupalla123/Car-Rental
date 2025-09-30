@@ -15,168 +15,28 @@
         <div class="circle"></div>
     </div>
 
-   <!-- Updated Header Section -->
-<header>
-    <div class="nav-container">
-        <a href="#home" class="logo">
-            <i class="fas fa-car"></i>
-            <span class="logo-text">Naidu Car Rentals</span>
-        </a>
-        
-        <!-- Desktop Navigation -->
-        <nav class="nav-links desktop-nav">
-            <a href="#home">Home</a>
-            <a href="#about">About</a>
-            <a href="#cars">Cars</a>
-            <a href="#bookings" class="bookings-link">My Bookings</a>
-            
-            <!-- Desktop Auth Buttons -->
-            <div class="auth-buttons desktop-auth">
-                <button class="btn btn-primary" id="loginBtn">Login</button>
-                <button class="btn btn-secondary" id="registerBtn">Register</button>
-            </div>
-        </nav>
-
-        <!-- Mobile Navigation -->
-        <div class="mobile-nav">
-            <!-- User Info Display (Mobile) -->
-            <div class="mobile-user-display" style="display: none;">
-                <span class="mobile-user-name"></span>
-            </div>
-            
-            <!-- Mobile Menu Button -->
-            <button class="mobile-menu-btn" id="mobileMenuBtn">
+    <!-- Header -->
+    <header>
+        <div class="nav-container">
+            <a href="#home" class="logo">
+                <i class="fas fa-car"></i>
+                 Car Rentals
+            </a>
+            <nav class="nav-links">
+                <a href="#home">Home</a>
+                <a href="#about">About</a>
+                <a href="#cars">Cars</a>
+                <a href="#bookings">My Bookings</a>
+                <div class="auth-buttons">
+                    <button class="btn btn-primary" id="loginBtn">Login</button>
+                    <button class="btn btn-secondary" id="registerBtn">Register</button>
+                </div>
+            </nav>
+            <button class="mobile-menu-btn">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
-    </div>
-
-    <!-- Mobile Menu Overlay -->
-    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-    
-    <!-- Mobile Sidebar Menu -->
-    <div class="mobile-sidebar" id="mobileSidebar">
-        <div class="mobile-sidebar-header">
-            <div class="mobile-logo">
-                <i class="fas fa-car"></i>
-                <span>Naidu Car Rentals</span>
-            </div>
-            <button class="mobile-close-btn" id="mobileCloseBtn">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        
-        <div class="mobile-sidebar-content">
-            <!-- User Info in Mobile Menu -->
-            <div class="mobile-user-info" id="mobileUserInfo" style="display: none;">
-                <div class="mobile-user-details">
-                    <i class="fas fa-user-circle"></i>
-                    <div>
-                        <div class="mobile-user-name"></div>
-                        <div class="mobile-user-email"></div>
-                    </div>
-                </div>
-                <div class="mobile-user-actions">
-                    <button class="btn btn-secondary btn-small mobile-logout-btn" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </div>
-            </div>
-
-            <!-- Mobile Navigation Links -->
-            <nav class="mobile-nav-links">
-                <a href="#home" class="mobile-nav-link" data-section="home">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </a>
-                <a href="#about" class="mobile-nav-link" data-section="about">
-                    <i class="fas fa-info-circle"></i>
-                    <span>About Us</span>
-                </a>
-                <a href="#cars" class="mobile-nav-link" data-section="cars">
-                    <i class="fas fa-car"></i>
-                    <span>Our Cars</span>
-                </a>
-                <a href="#bookings" class="mobile-nav-link bookings-link" data-section="bookings">
-                    <i class="fas fa-calendar-check"></i>
-                    <span>My Bookings</span>
-                </a>
-                
-                <!-- Admin Dashboard Link (Mobile) -->
-                <a href="admin.html" class="mobile-nav-link admin-nav-link-mobile" data-section="admin" style="display: none;">
-                    <i class="fas fa-user-shield"></i>
-                    <span>Admin Dashboard</span>
-                </a>
-            </nav>
-
-            <!-- Additional Mobile Sections for Increased Scrolling -->
-            <div class="mobile-additional-sections">
-                <!-- Quick Actions Section -->
-                <div class="mobile-section">
-                    <h4 class="mobile-section-title">Quick Actions</h4>
-                    <div class="mobile-action-buttons">
-                        <button class="mobile-action-btn" onclick="scrollToCars()">
-                            <i class="fas fa-search"></i>
-                            <span>Browse All Cars</span>
-                        </button>
-                        <button class="mobile-action-btn" onclick="showQuickBooking()">
-                            <i class="fas fa-bolt"></i>
-                            <span>Quick Booking</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Support Section -->
-                <div class="mobile-section">
-                    <h4 class="mobile-section-title">Support</h4>
-                    <div class="mobile-support-links">
-                        <a href="tel:+919876543210" class="mobile-support-link">
-                            <i class="fas fa-phone"></i>
-                            <span>Call Support</span>
-                        </a>
-                        <a href="mailto:support@naidurentals.com" class="mobile-support-link">
-                            <i class="fas fa-envelope"></i>
-                            <span>Email Us</span>
-                        </a>
-                        <a href="#faq" class="mobile-support-link">
-                            <i class="fas fa-question-circle"></i>
-                            <span>FAQ</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- App Info Section -->
-                <div class="mobile-section">
-                    <h4 class="mobile-section-title">App Info</h4>
-                    <div class="mobile-app-info">
-                        <div class="app-info-item">
-                            <i class="fas fa-shield-alt"></i>
-                            <span>Secure Booking</span>
-                        </div>
-                        <div class="app-info-item">
-                            <i class="fas fa-clock"></i>
-                            <span>24/7 Support</span>
-                        </div>
-                        <div class="app-info-item">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>Multiple Locations</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mobile Auth Buttons (When not logged in) -->
-            <div class="mobile-auth-buttons" id="mobileAuthButtons">
-                <button class="btn btn-primary btn-full mobile-login-btn" onclick="showLogin()">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </button>
-                <button class="btn btn-secondary btn-full mobile-register-btn" onclick="showRegister()">
-                    <i class="fas fa-user-plus"></i> Register
-                </button>
-            </div>
-        </div>
-    </div>
-</header>
+    </header>
 
     <!-- Hero Section -->
     <section id="home" class="hero">
