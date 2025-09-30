@@ -1,0 +1,30 @@
+# render.yaml
+services:
+  - type: web
+    name: naidu-car-rental-backend
+    env: node
+    plan: free
+    region: ohio
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        fromDatabase:
+          name: car-rental-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        value: https://naidu-car-rental-frontend.onrender.com
+      - key: PORT
+        value: 5000
+
+databases:
+  - name: car-rental-db
+    plan: free
+    databaseName: car-rental
+    region: ohio

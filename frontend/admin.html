@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Naidu Car Rentals</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Admin Specific Styles */
+        .admin-header {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+            background: #f8fafc;
+        }
+
+        .admin-sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+        }
+
+        .admin-brand {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+            color: white;
+        }
+
+        .admin-brand h2 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .sidebar-menu {
+            padding: 1rem 0;
+        }
+
+        .menu-item {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .menu-item:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+            border-left-color: #6366f1;
+        }
+
+        .menu-item.active {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-left-color: #1d4ed8;
+        }
+
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .admin-content {
+            flex: 1;
+            padding: 2rem;
+            background: #f8fafc;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            border-left: 4px solid;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .stat-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+        }
+
+        .stat-card.total-bookings { border-left-color: #3b82f6; }
+        .stat-card.confirmed-bookings { border-left-color: #10b981; }
+        .stat-card.pending-bookings { border-left-color: #f59e0b; }
+        .stat-card.active-bookings { border-left-color: #8b5cf6; }
+        .stat-card.revenue { border-left-color: #ef4444; }
+        .stat-card.today-bookings { border-left-color: #06b6d4; }
+
+        .stat-icon.total-bookings { background: #3b82f6; }
+        .stat-icon.confirmed-bookings { background: #10b981; }
+        .stat-icon.pending-bookings { background: #f59e0b; }
+        .stat-icon.active-bookings { background: #8b5cf6; }
+        .stat-icon.revenue { background: #ef4444; }
+        .stat-icon.today-bookings { background: #06b6d4; }
+
+        .stat-info h3 {
+            font-size: 2rem;
+            margin: 0 0 0.25rem 0;
+            color: #1e293b;
+            font-weight: 700;
+        }
+
+        .stat-info p {
+            margin: 0;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* Tables */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+
+        .table-header h3 {
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filters select, .filters input {
+            padding: 0.5rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        .bookings-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bookings-table th {
+            background: #f1f5f9;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .bookings-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+        }
+
+        .bookings-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .bookings-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            display: inline-block;
+        }
+
+        .status-badge.pending { background: #fef3c7; color: #92400e; }
+        .status-badge.confirmed { background: #d1fae5; color: #065f46; }
+        .status-badge.active { background: #dbeafe; color: #1e40af; }
+        .status-badge.completed { background: #f3e8ff; color: #5b21b6; }
+        .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+
+        /* Customer Info */
+        .customer-info {
+            line-height: 1.4;
+        }
+
+        .customer-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .customer-detail {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .btn-view {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s ease;
+        }
+
+        .btn-view:hover {
+            background: #2563eb;
+        }
+
+        .status-select {
+            padding: 0.4rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: white;
+            font-size: 0.8rem;
+            min-width: 120px;
+        }
+
+        /* Recent Bookings */
+        .recent-bookings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .recent-booking-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #3b82f6;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .recent-booking-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .booking-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .booking-customer h4 {
+            margin: 0 0 0.25rem 0;
+            color: #1e293b;
+        }
+
+        .booking-car {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .booking-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .booking-price {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1.1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .admin-container {
+                flex-direction: column;
+            }
+            
+            .admin-sidebar {
+                width: 100%;
+                order: 2;
+            }
+            
+            .admin-content {
+                order: 1;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .recent-bookings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .filters {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            
+            .bookings-table {
+                font-size: 0.85rem;
+            }
+            
+            .bookings-table th,
+            .bookings-table td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #3b82f6;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+            background: white;
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Admin Header -->
+    <header class="admin-header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h1 style="margin: 0; font-size: 1.5rem;">🚗 Car Rentals</h1>
+                    <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem;">
+                        Admin Dashboard
+                    </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span id="adminWelcome" style="font-weight: 500;"></span>
+                    <button class="btn btn-secondary" onclick="logout()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Admin Dashboard -->
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <div class="admin-sidebar">
+            <div class="admin-brand">
+                <h2><i class="fas fa-user-shield"></i> Admin Panel</h2>
+            </div>
+            <div class="sidebar-menu">
+                <div class="menu-item active" data-tab="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard Overview
+                </div>
+                <div class="menu-item" data-tab="bookings">
+                    <i class="fas fa-calendar-check"></i> All Bookings
+                </div>
+                <div class="menu-item" data-tab="customers">
+                    <i class="fas fa-users"></i> Customer Management
+                </div>
+                <div class="menu-item" data-tab="reports">
+                    <i class="fas fa-chart-bar"></i> Reports & Analytics
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <div style="margin-bottom: 2rem;">
+                    <h2 style="margin: 0 0 0.5rem 0; color: #1e293b;">Dashboard Overview</h2>
+                    <p style="margin: 0; color: #64748b;">Real-time insights and booking statistics</p>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card total-bookings">
+                        <div class="stat-icon total-bookings">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalBookings">0</h3>
+                            <p>Total Bookings</p>
+                        </div>
+                    </div>
+                    <div class="stat-card confirmed-bookings">
+                        <div class="stat-icon confirmed-bookings">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="confirmedBookings">0</h3>
+                            <p>Confirmed Bookings</p>
+                        </div>
+                    </div>
+                    <div class="stat-card pending-bookings">
+                        <div class="stat-icon pending-bookings">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pendingBookings">0</h3>
+                            <p>Pending Approval</p>
+                        </div>
+                    </div>
+                    <div class="stat-card active-bookings">
+                        <div class="stat-icon active-bookings">
+                            <i class="fas fa-car-side"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="activeBookings">0</h3>
+                            <p>Active Rentals</p>
+                        </div>
+                    </div>
+                    <div class="stat-card revenue">
+                        <div class="stat-icon revenue">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalRevenue">₹0</h3>
+                            <p>Total Revenue</p>
+                        </div>
+                    </div>
+                    <div class="stat-card today-bookings">
+                        <div class="stat-icon today-bookings">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="todaysBookings">0</h3>
+                            <p>Today's Bookings</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Bookings -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3><i class="fas fa-history"></i> Recent Bookings</h3>
+                        <button class="btn btn-primary" onclick="switchTab('bookings')">
+                            View All Bookings
+                        </button>
+                    </div>
+                    <div id="recentBookingsList" style="padding: 1.5rem;">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading recent bookings...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Bookings Tab -->
+            <div id="bookings" class="tab-content">
+                <div class="table-header">
+                    <h3><i class="fas fa-calendar-check"></i> All Customer Bookings</h3>
+                    <div class="filters">
+                        <select id="statusFilter" onchange="loadAllBookings()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <input type="date" id="dateFilter" onchange="loadAllBookings()">
+                        <button class="btn btn-primary" onclick="loadAllBookings()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div id="allBookingsList" class="table-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading all bookings...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Management Tab -->
+            <div id="customers" class="tab-content">
+                <div class="table-header">
+                    <h3><i class="fas fa-users"></i> Customer Management</h3>
+                    <div class="filters">
+                        <input type="text" id="customerSearch" placeholder="Search customers..." oninput="loadCustomers()">
+                    </div>
+                </div>
+                <div id="customersList" class="table-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading customers...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports" class="tab-content">
+                <div class="table-header">
+                    <h3><i class="fas fa-chart-bar"></i> Reports & Analytics</h3>
+                    <div class="filters">
+                        <select id="reportPeriod">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="reportsContent" class="table-container" style="padding: 2rem;">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading reports...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Details Modal -->
+    <div id="bookingDetailsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>Booking Details</h3>
+                <span class="close" onclick="closeModal('bookingDetailsModal')">&times;</span>
+            </div>
+            <div id="bookingDetailsContent" class="modal-body">
+                <!-- Booking details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
