@@ -18,6 +18,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -53,33 +54,22 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Test admin route directly
-app.get('/api/admin/test', (req, res) => {
-    res.json({
-        success: true,
-        message: 'Admin route is working!',
-        timestamp: new Date().toISOString()
-    });
+// Serve frontend pages
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Root route
-app.get('/', (req, res) => {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Disconnected ❌';
-    
-    res.json({ 
-        message: '🚗 Welcome to Naidu Car Rentals API',
-        version: '1.0.0',
-        database: dbStatus,
-        environment: process.env.NODE_ENV,
-        endpoints: {
-            auth: '/api/auth',
-            users: '/api/users', 
-            cars: '/api/cars',
-            bookings: '/api/bookings',
-            admin: '/api/admin',
-            health: '/health'
-        }
-    });
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Serve static assets
+app.get('/js/:file', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'js', req.params.file));
+});
+
+app.get('/css/:file', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'css', req.params.file));
 });
 
 // Error handling middleware
@@ -91,27 +81,16 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 404 handler - FIXED: Use express default 404 handling
-app.use((req, res, next) => {
-    res.status(404).json({ 
-        success: false, 
-        message: 'Route not found',
-        path: req.originalUrl,
-        availableEndpoints: [
-            '/',
-            '/health',
-            '/api/auth/login',
-            '/api/auth/register', 
-            '/api/auth/me',
-            '/api/users/profile',
-            '/api/cars',
-            '/api/bookings',
-            '/api/bookings/my-bookings',
-            '/api/admin/stats',
-            '/api/admin/bookings',
-            '/api/admin/users'
-        ]
-    });
+// 404 handler
+app.use((req, res) => {
+    if (req.path.startsWith('/api')) {
+        res.status(404).json({ 
+            success: false, 
+            message: 'API route not found'
+        });
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
 });
 
 const PORT = process.env.PORT || 5000;
@@ -119,26 +98,23 @@ const PORT = process.env.PORT || 5000;
 // Connect to database and start server
 const startServer = async () => {
     try {
-        console.log('🔗 Connecting to MongoDB Atlas...');
+        console.log('🔗 Connecting to Database...');
         await connectDB();
         
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`🚗 Naidu Car Rentals Server running on port ${PORT}`);
             console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
             console.log(`📊 Database: ${mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Disconnected ❌'}`);
-            console.log(`🔗 API URL: http://localhost:${PORT}`);
-            console.log('🎉 Server is ready! Database connection established.');
-            console.log('\n📋 Available Endpoints:');
-            console.log('   - GET  /health');
-            console.log('   - GET  /');
-            console.log('   - POST /api/auth/login');
-            console.log('   - POST /api/auth/register');
-            console.log('   - GET  /api/cars');
-            console.log('   - GET  /api/admin/stats');
+            console.log(`🔗 Main URL: http://localhost:${PORT}`);
+            console.log(`🔗 Admin URL: http://localhost:${PORT}/admin`);
+            console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+            console.log('🎉 Server is ready!');
         });
         
     } catch (error) {
         console.error('❌ Failed to start server:', error.message);
+        console.log('💡 For local development, check MongoDB Atlas IP whitelist');
+        console.log('🌐 On Render, this will work automatically');
         process.exit(1);
     }
 };
@@ -146,4 +122,4 @@ const startServer = async () => {
 // Start the server
 startServer();
 
-module.exports = app;
+module.exports = app; 

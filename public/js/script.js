@@ -1,11 +1,12 @@
 // API Configuration
-const API_BASE = 'https://car-rental-backend.onrender.com';
+const API_BASE = '/api';
 
 // Global variables
 let currentUser = null;
 let bookings = [];
 let cars = [];
 let selectedCar = null;
+
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {

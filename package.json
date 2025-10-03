@@ -1,13 +1,13 @@
 {
-  "name": "naidu-car-rental-backend",
+  "name": "naidu-car-rental-fullstack",
   "version": "1.0.0",
-  "description": "Backend for Naidu Car Rentals with MongoDB Atlas",
+  "description": "Fullstack Car Rental Application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
     "render-start": "node .render/seed-data.js && node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm install",
     "seed": "node .render/seed-data.js"
   },
   "dependencies": {
@@ -24,14 +24,6 @@
   "devDependencies": {
     "nodemon": "^3.1.10"
   },
-  "keywords": [
-    "car-rental",
-    "express",
-    "mongodb",
-    "atlas"
-  ],
-  "author": "Naidu Car Rentals",
-  "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   }

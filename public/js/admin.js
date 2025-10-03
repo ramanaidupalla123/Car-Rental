@@ -1,4 +1,4 @@
-const API_BASE = 'https://car-rental-backend.onrender.com';
+const API_BASE = '/api';
 
 // Initialize admin dashboard
 document.addEventListener('DOMContentLoaded', function() {
