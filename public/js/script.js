@@ -1,5 +1,16 @@
-// API Configuration
-const API_BASE = 'http://localhost:10000/api';
+// Dynamic API Base URL for mobile compatibility
+const API_BASE = (function() {
+    // If we're in production (on Render), use the production URL
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const productionUrl = `${window.location.origin}/api`;
+        console.log('🌐 Production API URL:', productionUrl);
+        return productionUrl;
+    }
+    // For local development
+    const localUrl = 'http://localhost:10000/api';
+    console.log('🌐 Local API URL:', localUrl);
+    return localUrl;
+})();
 
 // Global variables
 let currentUser = null;
@@ -7,6 +18,56 @@ let bookings = [];
 let cars = [];
 let selectedCar = null;
 
+// Enhanced fetch with mobile error handling
+async function mobileFetch(url, options = {}) {
+    try {
+        console.log('📡 API Call:', url);
+        
+        // Add timeout for mobile networks (15 seconds for slower connections)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const fetchOptions = {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...options.headers
+            }
+        };
+        
+        // Add authorization header if token exists
+        const token = localStorage.getItem('token');
+        if (token && !fetchOptions.headers.Authorization) {
+            fetchOptions.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(url, fetchOptions);
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('📱 Mobile fetch error:', error);
+        
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout. Please check your internet connection.');
+        }
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            throw new Error('Network connection failed. Please check your internet and try again.');
+        }
+        
+        throw error;
+    }
+}
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -16,14 +77,55 @@ document.addEventListener('DOMContentLoaded', function() {
 // Main initialization function
 function initializeApp() {
     console.log('🚗 Initializing Naidu Car Rentals...');
+    console.log('📱 Mobile Compatibility: Enabled');
+    console.log('🌐 Current Host:', window.location.hostname);
+    console.log('🔗 API Base:', API_BASE);
+    
     setupEventListeners();
     loadCars();
     checkAuthStatus();
     setupDateInputs();
     updateUI();
     initializeSessionManagement();
-    initializeMobileNavigation(); // Add mobile navigation
-    addNotificationStyles(); // Add notification styles
+    initializeMobileNavigation();
+    addNotificationStyles();
+    initializeMobileFeatures();
+}
+
+// Add mobile-specific features
+function initializeMobileFeatures() {
+    // Prevent zoom on input focus for better mobile experience
+    document.addEventListener('touchstart', function() {}, {passive: true});
+    
+    // Add touch-friendly styles
+    document.documentElement.style.setProperty('--min-touch-size', '44px');
+    
+    // Mobile viewport fix
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes');
+    }
+    
+    console.log('✅ Mobile features initialized');
+}
+
+// Mobile network detection
+function checkMobileNetwork() {
+    if (navigator.connection) {
+        const connection = navigator.connection;
+        console.log('📱 Network type:', connection.effectiveType);
+        console.log('📱 Network speed:', connection.downlink + ' Mbps');
+        
+        if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
+            showNotification('Slow network detected. Some features may load slowly.', 'warning');
+        }
+        
+        // Listen for network changes
+        connection.addEventListener('change', function() {
+            console.log('📱 Network changed to:', connection.effectiveType);
+            showTemporaryNotification(`Network changed to ${connection.effectiveType}`, 'info');
+        });
+    }
 }
 
 // Setup all event listeners
@@ -31,8 +133,11 @@ function setupEventListeners() {
     console.log('🔧 Setting up event listeners...');
     
     // Auth buttons
-    document.getElementById('loginBtn').addEventListener('click', showLogin);
-    document.getElementById('registerBtn').addEventListener('click', showRegister);
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    
+    if (loginBtn) loginBtn.addEventListener('click', showLogin);
+    if (registerBtn) registerBtn.addEventListener('click', showRegister);
     
     // Modal close buttons
     document.querySelectorAll('.close').forEach(closeBtn => {
@@ -45,26 +150,24 @@ function setupEventListeners() {
     });
     
     // Form submissions
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        handleLogin(e);
-    });
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const bookingForm = document.getElementById('bookingForm');
     
-    document.getElementById('registerForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        handleRegister(e);
-    });
-    
-    document.getElementById('bookingForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        handleBooking(e);
-    });
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (registerForm) registerForm.addEventListener('submit', handleRegister);
+    if (bookingForm) bookingForm.addEventListener('submit', handleBooking);
     
     // Form interactions
-    document.getElementById('rentalType').addEventListener('change', toggleRentalType);
-    document.getElementById('duration').addEventListener('input', calculateTotal);
-    document.getElementById('startDate').addEventListener('change', updateEndDate);
-    document.getElementById('endDate').addEventListener('change', calculateTotal);
+    const rentalType = document.getElementById('rentalType');
+    const duration = document.getElementById('duration');
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    if (rentalType) rentalType.addEventListener('change', toggleRentalType);
+    if (duration) duration.addEventListener('input', calculateTotal);
+    if (startDate) startDate.addEventListener('change', updateEndDate);
+    if (endDate) endDate.addEventListener('change', calculateTotal);
     
     // Filter interactions
     document.querySelectorAll('.company-btn').forEach(btn => {
@@ -74,9 +177,13 @@ function setupEventListeners() {
         });
     });
     
-    document.getElementById('typeFilter').addEventListener('change', applyAllFilters);
-    document.getElementById('priceFilter').addEventListener('change', applyAllFilters);
-    document.getElementById('searchInput').addEventListener('input', searchCars);
+    const typeFilter = document.getElementById('typeFilter');
+    const priceFilter = document.getElementById('priceFilter');
+    const searchInput = document.getElementById('searchInput');
+    
+    if (typeFilter) typeFilter.addEventListener('change', applyAllFilters);
+    if (priceFilter) priceFilter.addEventListener('change', applyAllFilters);
+    if (searchInput) searchInput.addEventListener('input', searchCars);
     
     // Close modals when clicking outside
     window.addEventListener('click', function(e) {
@@ -98,6 +205,19 @@ function setupEventListeners() {
                 });
             }
         });
+    });
+    
+    // Mobile orientation change handling
+    window.addEventListener('orientationchange', function() {
+        console.log('📱 Orientation changed:', screen.orientation.type);
+        // Small delay to allow CSS to adjust
+        setTimeout(() => {
+            if (window.innerHeight > window.innerWidth) {
+                console.log('📱 Portrait mode');
+            } else {
+                console.log('📱 Landscape mode');
+            }
+        }, 100);
     });
 }
 
@@ -146,6 +266,11 @@ function initializeMobileNavigation() {
             closeMobileMenu();
         }
     });
+    
+    // Close menu when clicking on a link
+    document.querySelectorAll('#mobileNavLinks a').forEach(link => {
+        link.addEventListener('click', closeMobileMenu);
+    });
 }
 
 function openMobileMenu() {
@@ -158,6 +283,7 @@ function openMobileMenu() {
         mobileNavOverlay.style.display = 'block';
         mobileNavLinks.classList.add('active');
         document.body.style.overflow = 'hidden'; // Prevent scrolling
+        console.log('📱 Mobile menu opened');
     }
 }
 
@@ -171,6 +297,7 @@ function closeMobileMenu() {
         mobileNavOverlay.style.display = 'none';
         mobileNavLinks.classList.remove('active');
         document.body.style.overflow = ''; // Restore scrolling
+        console.log('📱 Mobile menu closed');
     }
 }
 
@@ -236,11 +363,7 @@ async function loadCars() {
         console.log('🚗 Loading cars from API...');
         showLoading('carsContainer', 'Loading available cars...');
         
-        const response = await fetch(`${API_BASE}/cars`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await mobileFetch(`${API_BASE}/cars`);
         
         const result = await response.json();
         console.log('✅ Cars API response:', result);
@@ -259,6 +382,7 @@ async function loadCars() {
         }
     } catch (error) {
         console.error('❌ Error loading cars from API:', error);
+        showNotification('Using sample cars. API connection failed: ' + error.message, 'warning');
         loadSampleCars();
     }
 }
@@ -616,6 +740,7 @@ function updateEndDate() {
 
 // Handle registration
 async function handleRegister(e) {
+    e.preventDefault();
     console.log('📝 Registration form submitted');
     
     const userData = {
@@ -637,12 +762,8 @@ async function handleRegister(e) {
     try {
         showLoading('registerModal', 'Creating your account...');
         
-        const response = await fetch(`${API_BASE}/auth/register`, {
+        const response = await mobileFetch(`${API_BASE}/auth/register`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
             body: JSON.stringify(userData)
         });
 
@@ -678,8 +799,9 @@ async function handleRegister(e) {
     }
 }
 
-// Handle login - CORRECTED VERSION
+// Handle login
 async function handleLogin(e) {
+    e.preventDefault();
     console.log('🔐 Login form submitted');
     
     const credentials = {
@@ -697,12 +819,8 @@ async function handleLogin(e) {
     try {
         showLoading('loginModal', 'Authenticating...');
         
-        const response = await fetch(`${API_BASE}/auth/login`, {
+        const response = await mobileFetch(`${API_BASE}/auth/login`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
             body: JSON.stringify(credentials)
         });
 
@@ -744,6 +862,7 @@ async function handleLogin(e) {
 
 // Handle booking
 async function handleBooking(e) {
+    e.preventDefault();
     console.log('📅 Booking form submitted');
     
     if (!selectedCar || !currentUser) {
@@ -772,13 +891,8 @@ async function handleBooking(e) {
     try {
         showLoading('bookingModal', 'Processing your booking...');
         
-        const response = await fetch(`${API_BASE}/bookings`, {
+        const response = await mobileFetch(`${API_BASE}/bookings`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Accept': 'application/json'
-            },
             body: JSON.stringify(bookingData)
         });
 
@@ -806,12 +920,7 @@ async function loadUserBookings() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/bookings/my-bookings`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Accept': 'application/json'
-            }
-        });
+        const response = await mobileFetch(`${API_BASE}/bookings/my-bookings`);
         
         const result = await response.json();
         
@@ -897,7 +1006,7 @@ function displayBookings() {
     `).join('');
 }
 
-// Update UI based on auth status - IMPROVED VERSION
+// Update UI based on auth status
 function updateUI() {
     const loginBtn = document.getElementById('loginBtn');
     const registerBtn = document.getElementById('registerBtn');
@@ -936,8 +1045,10 @@ function updateUI() {
         `;
         
         // Replace desktop auth buttons with user display
-        authButtons.innerHTML = '';
-        authButtons.appendChild(userDisplay);
+        if (authButtons) {
+            authButtons.innerHTML = '';
+            authButtons.appendChild(userDisplay);
+        }
         
         // Update Mobile Auth Section
         if (mobileAuthButtons) {
@@ -952,7 +1063,7 @@ function updateUI() {
         }
         
         // Add Admin Dashboard link to navigation if user is admin
-        if (currentUser.role === 'admin') {
+        if (currentUser.role === 'admin' && navLinks) {
             console.log('👑 Admin user detected, adding dashboard link to nav');
             
             // Create admin dashboard link
@@ -1004,10 +1115,12 @@ function updateUI() {
         console.log('👤 No user logged in');
         
         // Desktop Auth Buttons
-        authButtons.innerHTML = `
-            <button class="btn btn-primary" id="loginBtn">Login</button>
-            <button class="btn btn-secondary" id="registerBtn">Register</button>
-        `;
+        if (authButtons) {
+            authButtons.innerHTML = `
+                <button class="btn btn-primary" id="loginBtn">Login</button>
+                <button class="btn btn-secondary" id="registerBtn">Register</button>
+            `;
+        }
         
         // Mobile Auth Buttons
         if (mobileAuthButtons) {
@@ -1022,31 +1135,33 @@ function updateUI() {
         }
         
         // Ensure "My Bookings" link exists for non-admin users
-        const existingBookingsLink = document.querySelector('a[href="#bookings"]');
-        if (!existingBookingsLink) {
-            const bookingsLink = document.createElement('a');
-            bookingsLink.href = "#bookings";
-            bookingsLink.textContent = "My Bookings";
-            bookingsLink.style.cssText = `
-                color: var(--lightest-slate);
-                text-decoration: none;
-                font-weight: 500;
-                transition: all 0.3s ease;
-                padding: 0.5rem 0;
-                position: relative;
-            `;
-            
-            // Add hover effect
-            bookingsLink.addEventListener('mouseenter', function() {
-                this.style.color = 'var(--green)';
-            });
-            
-            bookingsLink.addEventListener('mouseleave', function() {
-                this.style.color = 'var(--lightest-slate)';
-            });
-            
-            // Insert before auth buttons
-            navLinks.insertBefore(bookingsLink, authButtons);
+        if (navLinks) {
+            const existingBookingsLink = document.querySelector('a[href="#bookings"]');
+            if (!existingBookingsLink) {
+                const bookingsLink = document.createElement('a');
+                bookingsLink.href = "#bookings";
+                bookingsLink.textContent = "My Bookings";
+                bookingsLink.style.cssText = `
+                    color: var(--lightest-slate);
+                    text-decoration: none;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                    padding: 0.5rem 0;
+                    position: relative;
+                `;
+                
+                // Add hover effect
+                bookingsLink.addEventListener('mouseenter', function() {
+                    this.style.color = 'var(--green)';
+                });
+                
+                bookingsLink.addEventListener('mouseleave', function() {
+                    this.style.color = 'var(--lightest-slate)';
+                });
+                
+                // Insert before auth buttons
+                navLinks.insertBefore(bookingsLink, authButtons);
+            }
         }
         
         // Re-attach event listeners to new buttons
@@ -1070,7 +1185,7 @@ function updateUI() {
     }
 }
 
-// Check auth status on page load - UPDATED VERSION
+// Check auth status on page load
 function checkAuthStatus() {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
@@ -1161,6 +1276,8 @@ function showNotification(message, type = 'info') {
         z-index: 10000;
         box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         animation: slideInRight 0.3s ease;
+        max-width: 90vw;
+        word-wrap: break-word;
     `;
     
     notification.innerHTML = `
@@ -1256,12 +1373,8 @@ async function markBookingAsCompleted(bookingId) {
     try {
         showLoading('bookingsContainer', 'Marking booking as completed...');
         
-        const response = await fetch(`${API_BASE}/bookings/${bookingId}/complete`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
+        const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/complete`, {
+            method: 'PUT'
         });
 
         const result = await response.json();
@@ -1287,12 +1400,8 @@ async function cancelBooking(bookingId) {
     try {
         showLoading('bookingsContainer', 'Cancelling booking...');
         
-        const response = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
+        const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+            method: 'PUT'
         });
 
         const result = await response.json();
@@ -1331,7 +1440,7 @@ function showTemporaryNotification(message, type = 'info') {
         animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
         font-weight: 500;
         border-left: 4px solid;
-        max-width: 400px;
+        max-width: 90vw;
         word-wrap: break-word;
     `;
     
@@ -1395,9 +1504,49 @@ function addNotificationStyles() {
             .temporary-notification {
                 font-family: 'Poppins', sans-serif;
             }
+            
+            /* Mobile touch improvements */
+            @media (max-width: 768px) {
+                .book-btn, .btn {
+                    min-height: 44px;
+                    min-width: 44px;
+                }
+                
+                .car-card {
+                    margin: 10px 5px;
+                }
+                
+                .modal-content {
+                    margin: 5% auto;
+                    width: 95%;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
 }
 
+// Test API connection
+async function testAPIConnection() {
+    try {
+        console.log('🔗 Testing API connection...');
+        const response = await mobileFetch(`${API_BASE}/health`);
+        const result = await response.json();
+        console.log('✅ API Connection Test:', result);
+        return true;
+    } catch (error) {
+        console.error('❌ API Connection Test Failed:', error);
+        return false;
+    }
+}
+
+// Initialize API test on load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        testAPIConnection();
+        checkMobileNetwork();
+    }, 1000);
+});
+
 console.log('✅ Naidu Car Rentals Frontend loaded successfully!');
+console.log('📱 Mobile Compatibility: Enabled');
