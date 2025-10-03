@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://car-rental-backend.onrender.com';
 
 // Initialize admin dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -1140,6 +1140,68 @@ async function updateBookingStatus(bookingId, status) {
         showNotification('Error updating status: ' + error.message, 'error');
     }
 }
+
+// Add to admin.js - Show temporary notification for admin
+function showTemporaryNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `temporary-notification ${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 100px;
+        left: 20px;
+        background: white;
+        color: black;
+        padding: 12px 20px;
+        border-radius: 6px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+        font-weight: 500;
+        border-left: 4px solid;
+        max-width: 400px;
+        word-wrap: break-word;
+    `;
+    
+    const borderColor = type === 'success' ? '#10b981' : 
+                       type === 'error' ? '#ef4444' : 
+                       type === 'warning' ? '#f59e0b' : '#3b82f6';
+    
+    notification.style.borderLeftColor = borderColor;
+    
+    const icon = type === 'success' ? '✅' : 
+                type === 'error' ? '❌' : 
+                type === 'warning' ? '⚠️' : 'ℹ️';
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1em;">${icon}</span>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Update admin logout function
+function logout() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // Show logout notification
+    showTemporaryNotification(`👋 Goodbye, ${user.name || 'Admin'}!`, 'info');
+    
+    if (confirm('Are you sure you want to logout from admin dashboard?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+    }
+}
+
 // Enhanced API call with error handling
 async function makeApiCall(url, options = {}) {
   try {

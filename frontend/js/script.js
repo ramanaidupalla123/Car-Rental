@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://car-rental-backend.onrender.com';
 
 // Global variables
 let currentUser = null;
@@ -21,6 +21,8 @@ function initializeApp() {
     setupDateInputs();
     updateUI();
     initializeSessionManagement();
+    initializeMobileNavigation(); // Add mobile navigation
+    addNotificationStyles(); // Add notification styles
 }
 
 // Setup all event listeners
@@ -75,9 +77,6 @@ function setupEventListeners() {
     document.getElementById('priceFilter').addEventListener('change', applyAllFilters);
     document.getElementById('searchInput').addEventListener('input', searchCars);
     
-    // Mobile menu
-    document.querySelector('.mobile-menu-btn').addEventListener('click', toggleMobileMenu);
-    
     // Close modals when clicking outside
     window.addEventListener('click', function(e) {
         if (e.target.classList.contains('modal')) {
@@ -96,12 +95,82 @@ function setupEventListeners() {
                     behavior: 'smooth', 
                     block: 'start' 
                 });
-                // Close mobile menu if open
-                const navLinks = document.querySelector('.nav-links');
-                if (navLinks) navLinks.classList.remove('active');
             }
         });
     });
+}
+
+// Mobile Navigation Functions
+function initializeMobileNavigation() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileCloseBtn = document.getElementById('mobileCloseBtn');
+    const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+    const mobileNavLinks = document.getElementById('mobileNavLinks');
+    const mobileLoginBtn = document.getElementById('mobileLoginBtn');
+    const mobileRegisterBtn = document.getElementById('mobileRegisterBtn');
+
+    // Open mobile menu
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', openMobileMenu);
+    }
+
+    // Close mobile menu
+    if (mobileCloseBtn) {
+        mobileCloseBtn.addEventListener('click', closeMobileMenu);
+    }
+
+    // Close menu when clicking overlay
+    if (mobileNavOverlay) {
+        mobileNavOverlay.addEventListener('click', closeMobileMenu);
+    }
+
+    // Mobile auth buttons
+    if (mobileLoginBtn) {
+        mobileLoginBtn.addEventListener('click', function() {
+            showLogin();
+            closeMobileMenu();
+        });
+    }
+
+    if (mobileRegisterBtn) {
+        mobileRegisterBtn.addEventListener('click', function() {
+            showRegister();
+            closeMobileMenu();
+        });
+    }
+
+    // Close menu when pressing Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMobileMenu();
+        }
+    });
+}
+
+function openMobileMenu() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+    const mobileNavLinks = document.getElementById('mobileNavLinks');
+
+    if (mobileMenuBtn && mobileNavOverlay && mobileNavLinks) {
+        mobileMenuBtn.classList.add('active');
+        mobileNavOverlay.style.display = 'block';
+        mobileNavLinks.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+    }
+}
+
+function closeMobileMenu() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+    const mobileNavLinks = document.getElementById('mobileNavLinks');
+
+    if (mobileMenuBtn && mobileNavOverlay && mobileNavLinks) {
+        mobileMenuBtn.classList.remove('active');
+        mobileNavOverlay.style.display = 'none';
+        mobileNavLinks.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scrolling
+    }
 }
 
 // Show login modal
@@ -591,8 +660,8 @@ async function handleRegister(e) {
             updateUI();
             await loadUserBookings();
             
-            showNotification('🎉 Registration successful! Welcome, ' + currentUser.name, 'success');
-            
+            // Show temporary notification
+            showTemporaryNotification('🎉 Registration successful! Welcome, ' + currentUser.name, 'success');
         } else {
             throw new Error(result.message || 'Registration failed');
         }
@@ -651,10 +720,11 @@ async function handleLogin(e) {
             updateUI();
             await loadUserBookings();
             
+            // Show temporary notification
             if (currentUser.role === 'admin') {
-                showNotification(`🎉 Welcome Admin ${currentUser.name}! Access your dashboard from the navigation.`, 'success');
+                showTemporaryNotification(`🎉 Welcome Admin ${currentUser.name}!`, 'success');
             } else {
-                showNotification(`✅ Welcome back, ${currentUser.name}!`, 'success');
+                showTemporaryNotification(`✅ Welcome back, ${currentUser.name}!`, 'success');
             }
         } else {
             throw new Error(result.message || 'Login failed');
@@ -832,6 +902,7 @@ function updateUI() {
     const registerBtn = document.getElementById('registerBtn');
     const authButtons = document.querySelector('.auth-buttons');
     const navLinks = document.querySelector('.nav-links');
+    const mobileAuthButtons = document.querySelector('.mobile-auth-buttons');
     
     console.log('🔄 Updating UI, currentUser:', currentUser);
     
@@ -851,7 +922,7 @@ function updateUI() {
         // User is logged in
         console.log('👤 User logged in:', currentUser.name);
         
-        // Create user display element
+        // Create user display element for desktop
         const userDisplay = document.createElement('div');
         userDisplay.className = 'user-display';
         userDisplay.innerHTML = `
@@ -863,9 +934,21 @@ function updateUI() {
             </button>
         `;
         
-        // Replace auth buttons with user display
+        // Replace desktop auth buttons with user display
         authButtons.innerHTML = '';
         authButtons.appendChild(userDisplay);
+        
+        // Update Mobile Auth Section
+        if (mobileAuthButtons) {
+            mobileAuthButtons.innerHTML = `
+                <div style="text-align: center; color: var(--green); margin-bottom: 1rem;">
+                    <i class="fas fa-user"></i> Welcome, ${currentUser.name}
+                </div>
+                <button class="btn btn-secondary btn-full" onclick="logout(); closeMobileMenu();">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            `;
+        }
         
         // Add Admin Dashboard link to navigation if user is admin
         if (currentUser.role === 'admin') {
@@ -918,10 +1001,24 @@ function updateUI() {
     } else {
         // User is not logged in
         console.log('👤 No user logged in');
+        
+        // Desktop Auth Buttons
         authButtons.innerHTML = `
             <button class="btn btn-primary" id="loginBtn">Login</button>
             <button class="btn btn-secondary" id="registerBtn">Register</button>
         `;
+        
+        // Mobile Auth Buttons
+        if (mobileAuthButtons) {
+            mobileAuthButtons.innerHTML = `
+                <button class="btn btn-primary btn-full" id="mobileLoginBtn">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button class="btn btn-secondary btn-full" id="mobileRegisterBtn">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+            `;
+        }
         
         // Ensure "My Bookings" link exists for non-admin users
         const existingBookingsLink = document.querySelector('a[href="#bookings"]');
@@ -955,13 +1052,19 @@ function updateUI() {
         setTimeout(() => {
             const newLoginBtn = document.getElementById('loginBtn');
             const newRegisterBtn = document.getElementById('registerBtn');
+            const newMobileLoginBtn = document.getElementById('mobileLoginBtn');
+            const newMobileRegisterBtn = document.getElementById('mobileRegisterBtn');
             
-            if (newLoginBtn) {
-                newLoginBtn.addEventListener('click', showLogin);
-            }
-            if (newRegisterBtn) {
-                newRegisterBtn.addEventListener('click', showRegister);
-            }
+            if (newLoginBtn) newLoginBtn.addEventListener('click', showLogin);
+            if (newRegisterBtn) newRegisterBtn.addEventListener('click', showRegister);
+            if (newMobileLoginBtn) newMobileLoginBtn.addEventListener('click', function() {
+                showLogin();
+                closeMobileMenu();
+            });
+            if (newMobileRegisterBtn) newMobileRegisterBtn.addEventListener('click', function() {
+                showRegister();
+                closeMobileMenu();
+            });
         }, 100);
     }
 }
@@ -1002,6 +1105,10 @@ function checkAuthStatus() {
 function logout() {
     console.log('👋 Logging out user:', currentUser?.name);
     
+    // Show logout notification before clearing data
+    const userName = currentUser?.name || 'User';
+    showTemporaryNotification(`👋 Goodbye, ${userName}!`, 'info');
+    
     // Clear all storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -1013,7 +1120,6 @@ function logout() {
     
     updateUI();
     displayBookings();
-    showNotification('👋 Logged out successfully', 'info');
 }
 
 // Show loading state
@@ -1101,30 +1207,6 @@ function showError(containerId, message) {
 // Scroll to cars section
 function scrollToCars() {
     document.getElementById('cars').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Enhanced Mobile Menu Function
-function toggleMobileMenu() {
-    const navLinks = document.querySelector('.nav-links');
-    const mobileBtn = document.querySelector('.mobile-menu-btn');
-    const body = document.body;
-    
-    navLinks.classList.toggle('active');
-    
-    // Prevent body scroll when menu is open
-    if (navLinks.classList.contains('active')) {
-        body.style.overflow = 'hidden';
-        mobileBtn.innerHTML = '<i class="fas fa-times"></i>';
-    } else {
-        body.style.overflow = '';
-        mobileBtn.innerHTML = '<i class="fas fa-bars"></i>';
-    }
-    
-    // Ensure admin link is visible in mobile menu
-    const adminLink = document.querySelector('.admin-nav-link');
-    if (adminLink && navLinks.classList.contains('active')) {
-        adminLink.style.display = 'flex';
-    }
 }
 
 // Session management for automatic logout on tab close
@@ -1223,6 +1305,97 @@ async function cancelBooking(bookingId) {
     } catch (error) {
         console.error('Error cancelling booking:', error);
         showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Show temporary notification message
+function showTemporaryNotification(message, type = 'info') {
+    // Remove existing temporary notifications
+    const existingNotifications = document.querySelectorAll('.temporary-notification');
+    existingNotifications.forEach(notif => notif.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `temporary-notification ${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 100px;
+        left: 20px;
+        background: white;
+        color: black;
+        padding: 12px 20px;
+        border-radius: 6px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+        font-weight: 500;
+        border-left: 4px solid;
+        max-width: 400px;
+        word-wrap: break-word;
+    `;
+    
+    // Set border color based on type
+    const borderColor = type === 'success' ? '#10b981' : 
+                       type === 'error' ? '#ef4444' : 
+                       type === 'warning' ? '#f59e0b' : '#3b82f6';
+    
+    notification.style.borderLeftColor = borderColor;
+    
+    // Add icon based on type
+    const icon = type === 'success' ? '✅' : 
+                type === 'error' ? '❌' : 
+                type === 'warning' ? '⚠️' : 'ℹ️';
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1em;">${icon}</span>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Add this CSS animation to your style.css
+function addNotificationStyles() {
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideInLeft {
+                from {
+                    opacity: 0;
+                    transform: translateX(-100%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+            
+            @keyframes fadeOut {
+                from {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateX(-100%);
+                }
+            }
+            
+            .temporary-notification {
+                font-family: 'Poppins', sans-serif;
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
 
