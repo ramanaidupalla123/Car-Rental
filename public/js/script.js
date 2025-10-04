@@ -860,7 +860,7 @@ async function handleLogin(e) {
     }
 }
 
-// Handle booking
+// Handle booking - CORRECTED VERSION
 async function handleBooking(e) {
     e.preventDefault();
     console.log('📅 Booking form submitted');
@@ -887,15 +887,23 @@ async function handleBooking(e) {
     };
 
     console.log('🚗 Booking data:', bookingData);
+    console.log('🔑 User token:', localStorage.getItem('token') ? 'Present' : 'Missing');
 
     try {
         showLoading('bookingModal', 'Processing your booking...');
         
         const response = await mobileFetch(`${API_BASE}/bookings`, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Accept': 'application/json'
+            },
             body: JSON.stringify(bookingData)
         });
 
+        console.log('📊 Booking response status:', response.status);
+        
         const result = await response.json();
         console.log('📊 Booking response:', result);
 
@@ -903,16 +911,26 @@ async function handleBooking(e) {
             showNotification('🎉 Booking confirmed for ' + selectedCar.make + ' ' + selectedCar.model, 'success');
             closeModal('bookingModal');
             await loadUserBookings();
+            
+            // Reload cars to update availability
+            loadCars();
         } else {
             throw new Error(result.message || 'Booking failed');
         }
     } catch (error) {
         console.error('❌ Booking error:', error);
         showNotification(error.message || 'Failed to book car. Please try again.', 'error');
+        
+        // Remove loading state
+        const bookingModal = document.getElementById('bookingModal');
+        if (bookingModal) {
+            bookingModal.querySelector('.loading')?.remove();
+        }
     }
 }
 
-// Load user bookings
+
+// Load user bookings - CORRECTED VERSION
 async function loadUserBookings() {
     if (!currentUser) {
         displayBookings();
@@ -920,7 +938,12 @@ async function loadUserBookings() {
     }
 
     try {
-        const response = await mobileFetch(`${API_BASE}/bookings/my-bookings`);
+        const response = await mobileFetch(`${API_BASE}/bookings/my-bookings`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Accept': 'application/json'
+            }
+        });
         
         const result = await response.json();
         
@@ -928,6 +951,8 @@ async function loadUserBookings() {
             bookings = result.bookings || [];
             console.log('✅ Loaded bookings:', bookings.length);
             displayBookings();
+        } else {
+            throw new Error(result.message || 'Failed to load bookings');
         }
     } catch (error) {
         console.error('Error loading bookings:', error);
@@ -1374,7 +1399,11 @@ async function markBookingAsCompleted(bookingId) {
         showLoading('bookingsContainer', 'Marking booking as completed...');
         
         const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/complete`, {
-            method: 'PUT'
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Accept': 'application/json'
+            }
         });
 
         const result = await response.json();
@@ -1401,7 +1430,11 @@ async function cancelBooking(bookingId) {
         showLoading('bookingsContainer', 'Cancelling booking...');
         
         const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
-            method: 'PUT'
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Accept': 'application/json'
+            }
         });
 
         const result = await response.json();
