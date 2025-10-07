@@ -6,6 +6,95 @@
     <title>Car Rentals - Premium Car Rental Service</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Additional CSS for OTP modals */
+        .otp-method-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .method-option input[type="radio"] {
+            display: none;
+        }
+
+        .method-card {
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .method-option input[type="radio"]:checked + .method-card {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .method-card i {
+            font-size: 1.5rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .method-option input[type="radio"]:checked + .method-card i {
+            color: #3b82f6;
+        }
+
+        .method-card span {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .otp-timer {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .otp-timer i {
+            color: #f59e0b;
+            margin-right: 0.5rem;
+        }
+
+        #otpTimer {
+            font-weight: bold;
+            color: #059669;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+        }
+
+        #enterOTP {
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 8px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .method-switch {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .otp-method-selector {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Animated Background -->
@@ -16,71 +105,71 @@
     </div>
 
     <!-- Header -->
-<header>
-    <div class="nav-container">
-        <a href="#home" class="logo">
-            <i class="fas fa-car"></i>
-            Car Rentals
-        </a>
-        
-        <!-- Desktop Navigation -->
-        <nav class="nav-links desktop-nav">
-            <a href="#home">Home</a>
-            <a href="#about">About</a>
-            <a href="#cars">Cars</a>
-            <a href="#bookings">My Bookings</a>
-            <div class="auth-buttons">
-                <button class="btn btn-primary" id="loginBtn">Login</button>
-                <button class="btn btn-secondary" id="registerBtn">Register</button>
-            </div>
-        </nav>
-
-        <!-- Mobile Hamburger Menu -->
-        <button class="mobile-menu-btn" id="mobileMenuBtn">
-            <span class="hamburger-line"></span>
-            <span class="hamburger-line"></span>
-            <span class="hamburger-line"></span>
-        </button>
-
-        <!-- Mobile Navigation Menu -->
-        <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-        <nav class="mobile-nav-links" id="mobileNavLinks">
-            <div class="mobile-nav-header">
-                <a href="#home" class="logo">
-                    <i class="fas fa-car"></i>
-                    Car Rentals
-                </a>
-                <button class="mobile-close-btn" id="mobileCloseBtn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+    <header>
+        <div class="nav-container">
+            <a href="#home" class="logo">
+                <i class="fas fa-car"></i>
+                Car Rentals
+            </a>
             
-            <div class="mobile-nav-content">
-                <a href="#home" class="mobile-nav-item" onclick="closeMobileMenu()">
-                    <i class="fas fa-home"></i> Home
-                </a>
-                <a href="#about" class="mobile-nav-item" onclick="closeMobileMenu()">
-                    <i class="fas fa-info-circle"></i> About
-                </a>
-                <a href="#cars" class="mobile-nav-item" onclick="closeMobileMenu()">
-                    <i class="fas fa-car"></i> Cars
-                </a>
-                <a href="#bookings" class="mobile-nav-item" onclick="closeMobileMenu()">
-                    <i class="fas fa-calendar-check"></i> My Bookings
-                </a>
-                
-                <div class="mobile-auth-buttons">
-                    <button class="btn btn-primary btn-full" id="mobileLoginBtn" onclick="closeMobileMenu()">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </button>
-                    <button class="btn btn-secondary btn-full" id="mobileRegisterBtn" onclick="closeMobileMenu()">
-                        <i class="fas fa-user-plus"></i> Register
+            <!-- Desktop Navigation -->
+            <nav class="nav-links desktop-nav">
+                <a href="#home">Home</a>
+                <a href="#about">About</a>
+                <a href="#cars">Cars</a>
+                <a href="#bookings">My Bookings</a>
+                <div class="auth-buttons">
+                    <button class="btn btn-primary" id="loginBtn">Login</button>
+                    <button class="btn btn-secondary" id="registerBtn">Register</button>
+                </div>
+            </nav>
+
+            <!-- Mobile Hamburger Menu -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
+            <!-- Mobile Navigation Menu -->
+            <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+            <nav class="mobile-nav-links" id="mobileNavLinks">
+                <div class="mobile-nav-header">
+                    <a href="#home" class="logo">
+                        <i class="fas fa-car"></i>
+                        Car Rentals
+                    </a>
+                    <button class="mobile-close-btn" id="mobileCloseBtn">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
-            </div>
-        </nav>
-    </div>
-</header>
+                
+                <div class="mobile-nav-content">
+                    <a href="#home" class="mobile-nav-item" onclick="closeMobileMenu()">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                    <a href="#about" class="mobile-nav-item" onclick="closeMobileMenu()">
+                        <i class="fas fa-info-circle"></i> About
+                    </a>
+                    <a href="#cars" class="mobile-nav-item" onclick="closeMobileMenu()">
+                        <i class="fas fa-car"></i> Cars
+                    </a>
+                    <a href="#bookings" class="mobile-nav-item" onclick="closeMobileMenu()">
+                        <i class="fas fa-calendar-check"></i> My Bookings
+                    </a>
+                    
+                    <div class="mobile-auth-buttons">
+                        <button class="btn btn-primary btn-full" id="mobileLoginBtn" onclick="closeMobileMenu()">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button class="btn btn-secondary btn-full" id="mobileRegisterBtn" onclick="closeMobileMenu()">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
 
     <!-- Hero Section -->
     <section id="home" class="hero">
@@ -222,7 +311,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024  Car Rentals. All rights reserved.</p>
+                <p>&copy; 2024 Car Rentals. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -243,8 +332,13 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-full">Login</button>
             </form>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="javascript:void(0)" onclick="showForgotPassword()" style="color: #3b82f6; text-decoration: none;">
+                    <i class="fas fa-key"></i> Forgot your password?
+                </a>
+            </div>
             <div class="form-switch">
-                Don't have an account? <a href="#" onclick="showRegister()">Register here</a>
+                Don't have an account? <a href="javascript:void(0)" onclick="showRegister()">Register here</a>
             </div>
         </div>
     </div>
@@ -278,7 +372,7 @@
                 <button type="submit" class="btn btn-primary btn-full">Register</button>
             </form>
             <div class="form-switch">
-                Already have an account? <a href="#" onclick="showLogin()">Login here</a>
+                Already have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a>
             </div>
         </div>
     </div>
@@ -377,12 +471,105 @@
             </div>
         </div>
     </div>
-    <!-- Add this in your navigation or user area -->
-<div id="adminLink" style="display: none; margin-left: 1rem;">
-    <a href="admin.html" class="btn btn-warning" style="background: #f59e0b; color: white;">
-        <i class="fas fa-user-shield"></i> Admin Dashboard
-    </a>
+
+<!-- Send OTP Modal - EMAIL ONLY -->
+<div id="sendOTPModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 class="form-title"><i class="fas fa-key"></i> Reset Your Password</h2>
+        <p style="color: #6b7280; margin-bottom: 1.5rem; text-align: center;">
+            Enter your email address to receive a verification code
+        </p>
+        
+        <div id="sendOTPForm">
+            <form onsubmit="handleSendOTP(event)">
+                <div class="form-group">
+                    <label for="otpEmail"><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="otpEmail" placeholder="Enter your email address" required>
+                    <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
+                        <i class="fas fa-info-circle"></i> We'll send a 6-digit code to your email
+                    </small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-paper-plane"></i> Send Verification Code
+                </button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="javascript:void(0)" onclick="showLogin()" style="color: #6b7280; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </a>
+            </div>
+        </div>
+
+        <div id="otpSentSuccess" style="display: none; text-align: center;">
+            <div id="successMessage"></div>
+            <div class="otp-timer">
+                <i class="fas fa-clock"></i>
+                Code expires in: <span id="otpTimer">10:00</span>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="showVerifyOTPModal()">
+                <i class="fas fa-key"></i> Enter Verification Code
+            </button>
+            <button id="resendOTP" class="btn btn-outline btn-full" onclick="resendOTP()" style="display: none; margin-top: 1rem;">
+                <i class="fas fa-redo"></i> Resend Code
+            </button>
+        </div>
+    </div>
 </div>
+
+<!-- Verify OTP Modal - UPDATED -->
+<div id="verifyOTPModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 class="form-title"><i class="fas fa-shield-alt"></i> Reset Your Password</h2>
+        
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <p>Enter the 6-digit code sent to:</p>
+            <p id="verifyContactDisplay" style="font-weight: bold; color: var(--green); margin-top: 0.5rem;"></p>
+        </div>
+
+        <form id="verifyOTPForm" onsubmit="handleVerifyOTP(event)">
+            <div class="form-group">
+                <label for="enterOTP"><i class="fas fa-key"></i> 6-digit OTP Code</label>
+                <input type="text" id="enterOTP" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}" required 
+                       style="font-size: 1.5rem; text-align: center; letter-spacing: 8px; font-weight: bold;">
+                <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
+                    <i class="fas fa-terminal"></i> Check server console for OTP
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="newPassword"><i class="fas fa-lock"></i> New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password (min. 6 characters)" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmNewPassword"><i class="fas fa-lock"></i> Confirm New Password</label>
+                <input type="password" id="confirmNewPassword" placeholder="Confirm new password" required minlength="6">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-check"></i> Reset Password
+            </button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 1rem;">
+            <a href="javascript:void(0)" onclick="showForgotPassword()" style="color: #6b7280; text-decoration: none;">
+                <i class="fas fa-arrow-left"></i> Back to Email Entry
+            </a>
+        </div>
+    </div>
+</div>
+
+    <!-- Admin Link (will be shown dynamically) -->
+    <div id="adminLink" style="display: none; margin-left: 1rem;">
+        <a href="admin.html" class="btn btn-warning" style="background: #f59e0b; color: white;">
+            <i class="fas fa-user-shield"></i> Admin Dashboard
+        </a>
+    </div>
+
     <script src="js/script.js"></script>
 </body>
 </html>

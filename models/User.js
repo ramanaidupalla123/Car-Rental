@@ -43,12 +43,15 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  resetPasswordOTP: String,
+  resetPasswordOTPExpire: Date
+
 }, {
   timestamps: true
 });
 
-// Define fixed admin emails - UPDATE THESE TO YOUR ACTUAL EMAILS
+// Define fixed admin emails
 userSchema.statics.adminEmails = [
   'ramanaidupalla359@gmail.com',
   'nleelasairamnakka@gmail.com'
@@ -56,7 +59,6 @@ userSchema.statics.adminEmails = [
 
 // Auto-detect admin based on email
 userSchema.pre('save', function(next) {
-  // Check if this email is in the admin list
   if (this.constructor.adminEmails.includes(this.email.toLowerCase())) {
     this.role = 'admin';
     console.log(`✅ Auto-assigned admin role to: ${this.email}`);
