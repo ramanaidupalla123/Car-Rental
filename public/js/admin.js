@@ -1,8 +1,74 @@
-const API_BASE = 'http://localhost:10000/api';
+// Dynamic API Base URL for mobile compatibility
+const API_BASE = (function() {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const productionUrl = `${window.location.origin}/api`;
+        console.log('🌐 Admin Production API URL:', productionUrl);
+        return productionUrl;
+    }
+    const localUrl = 'http://localhost:10000/api';
+    console.log('🌐 Admin Local API URL:', localUrl);
+    return localUrl;
+})();
+
+// Enhanced fetch with mobile error handling
+async function mobileFetch(url, options = {}) {
+    try {
+        console.log('📡 Admin API Call:', url);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const fetchOptions = {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                ...options.headers
+            }
+        };
+        
+        const response = await fetch(url, fetchOptions);
+        
+        clearTimeout(timeoutId);
+        
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+            throw new Error('Session expired. Please login again.');
+        }
+
+        if (response.status === 403) {
+            throw new Error('Access denied. Admin privileges required.');
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('📱 Admin Mobile fetch error:', error);
+        
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout. Please check your internet connection.');
+        }
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            throw new Error('Network connection failed. Please check your internet and try again.');
+        }
+        
+        throw error;
+    }
+}
 
 // Initialize admin dashboard
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Admin Dashboard Initializing...');
+    console.log('🌐 Admin API Base:', API_BASE);
+    
     checkAdminAuth();
     setupAdminEventListeners();
     loadDashboardStats();
@@ -21,14 +87,18 @@ function checkAdminAuth() {
     });
     
     if (!token) {
-        alert('Please login first to access admin dashboard.');
-        window.location.href = 'index.html';
+        showNotification('Please login first to access admin dashboard.', 'error');
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 2000);
         return;
     }
     
     if (user.role !== 'admin') {
-        alert(`Access Denied. User ${user.email} does not have admin privileges.`);
-        window.location.href = 'index.html';
+        showNotification(`Access Denied. User ${user.email} does not have admin privileges.`, 'error');
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 2000);
         return;
     }
     
@@ -47,7 +117,31 @@ function setupAdminEventListeners() {
         });
     });
     
+    // Filter event listeners
+    const statusFilter = document.getElementById('statusFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    const customerSearch = document.getElementById('customerSearch');
+    const reportPeriod = document.getElementById('reportPeriod');
+    
+    if (statusFilter) statusFilter.addEventListener('change', loadAllBookings);
+    if (dateFilter) dateFilter.addEventListener('change', loadAllBookings);
+    if (customerSearch) customerSearch.addEventListener('input', debounce(loadCustomers, 500));
+    if (reportPeriod) reportPeriod.addEventListener('change', loadReports);
+    
     console.log('✅ Admin event listeners setup complete');
+}
+
+// Debounce function for search
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 // Switch between tabs
@@ -101,20 +195,9 @@ async function loadDashboardStats() {
     try {
         console.log('📊 Fetching dashboard statistics...');
         
-        const response = await fetch(`${API_BASE}/admin/stats`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Stats API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(`${API_BASE}/admin/stats`);
         const result = await response.json();
+        
         console.log('📊 Stats API Response:', result);
         
         if (result.success) {
@@ -141,20 +224,9 @@ async function loadRecentBookings() {
     try {
         console.log('🔄 Loading recent bookings...');
         
-        const response = await fetch(`${API_BASE}/admin/bookings?limit=6`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Recent Bookings API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(`${API_BASE}/admin/bookings?limit=6`);
         const result = await response.json();
+        
         console.log('📋 Recent Bookings API Response:', result);
         
         if (result.success) {
@@ -200,7 +272,6 @@ function displayRecentBookings(bookings) {
                     <div class="customer-detail">
                         <div><i class="fas fa-phone"></i> ${booking.user?.phone || 'N/A'}</div>
                         <div><i class="fas fa-envelope"></i> ${booking.user?.email || 'N/A'}</div>
-                        <div><i class="fas fa-map-marker-alt"></i> ${booking.user?.address?.city || 'N/A'}</div>
                     </div>
                     <div class="booking-meta">
                         <div>
@@ -229,26 +300,15 @@ async function loadAllBookings() {
         
         if (statusFilter) params.append('status', statusFilter);
         if (dateFilter) params.append('date', dateFilter);
-        params.append('limit', '100'); // Load more bookings
+        params.append('limit', '100');
         
         if (params.toString()) url += `?${params.toString()}`;
         
         console.log('📡 Fetching bookings from:', url);
         
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 All Bookings API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(url);
         const result = await response.json();
+        
         console.log('📋 All Bookings API Response:', result);
         
         if (result.success) {
@@ -283,12 +343,10 @@ function displayAllBookings(bookings) {
             <table class="bookings-table">
                 <thead>
                     <tr>
-                        <th>Booking ID</th>
-                        <th>Customer Details</th>
-                        <th>Car Details</th>
-                        <th>Booking Dates</th>
-                        <th>Duration</th>
-                        <th>Total Amount</th>
+                        <th>Customer</th>
+                        <th>Car</th>
+                        <th>Dates</th>
+                        <th>Amount</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -296,29 +354,25 @@ function displayAllBookings(bookings) {
                 <tbody>
                     ${bookings.map(booking => `
                         <tr>
-                            <td><small>${booking._id?.slice(-8) || 'N/A'}</small></td>
                             <td>
                                 <div class="customer-info">
                                     <div class="customer-name">${booking.user?.name || 'N/A'}</div>
-                                    <div class="customer-detail">📧 ${booking.user?.email || 'N/A'}</div>
-                                    <div class="customer-detail">📞 ${booking.user?.phone || 'N/A'}</div>
-                                    <div class="customer-detail">🏠 ${booking.user?.address?.city || 'N/A'}</div>
+                                    <div class="customer-detail">${booking.user?.email || 'N/A'}</div>
+                                    <div class="customer-detail">${booking.user?.phone || 'N/A'}</div>
                                 </div>
                             </td>
                             <td>
                                 <div class="customer-info">
                                     <div class="customer-name">${booking.car?.make || ''} ${booking.car?.model || ''}</div>
-                                    <div class="customer-detail">${booking.car?.type || ''} • ${booking.car?.color || ''}</div>
-                                    <div class="customer-detail">${booking.car?.registrationNumber || 'N/A'}</div>
+                                    <div class="customer-detail">${booking.car?.type || ''}</div>
                                 </div>
                             </td>
                             <td>
                                 <div class="customer-info">
-                                    <div class="customer-detail"><strong>Start:</strong> ${new Date(booking.startDate).toLocaleDateString()}</div>
-                                    <div class="customer-detail"><strong>End:</strong> ${new Date(booking.endDate).toLocaleDateString()}</div>
+                                    <div class="customer-detail">${new Date(booking.startDate).toLocaleDateString()}</div>
+                                    <div class="customer-detail">to ${new Date(booking.endDate).toLocaleDateString()}</div>
                                 </div>
                             </td>
-                            <td>${booking.duration} ${booking.rentalType}</td>
                             <td><strong>₹${booking.totalPrice}</strong></td>
                             <td>
                                 <span class="status-badge ${booking.status}">${booking.status}</span>
@@ -362,20 +416,9 @@ async function loadCustomers() {
             url += `?search=${encodeURIComponent(searchQuery)}`;
         }
         
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Customers API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(url);
         const result = await response.json();
+        
         console.log('👥 Customers API Response:', result);
         
         if (result.success) {
@@ -410,50 +453,29 @@ function displayCustomers(users) {
             <table class="bookings-table">
                 <thead>
                     <tr>
-                        <th>Customer ID</th>
-                        <th>Personal Details</th>
-                        <th>Contact Information</th>
-                        <th>Address</th>
-                        <th>Registration Date</th>
+                        <th>Customer Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
                         <th>Total Bookings</th>
                         <th>Total Spent</th>
-                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${users.map(customer => `
                         <tr>
-                            <td><small>${customer._id?.slice(-8) || 'N/A'}</small></td>
                             <td>
                                 <div class="customer-info">
                                     <div class="customer-name">${customer.name}</div>
                                     <div class="customer-detail">Member since ${new Date(customer.createdAt).getFullYear()}</div>
                                 </div>
                             </td>
+                            <td>${customer.email}</td>
+                            <td>${customer.phone}</td>
                             <td>
-                                <div class="customer-info">
-                                    <div class="customer-detail">📧 ${customer.email}</div>
-                                    <div class="customer-detail">📞 ${customer.phone}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="customer-info">
-                                    <div class="customer-detail">${customer.address?.street || 'N/A'}</div>
-                                    <div class="customer-detail">${customer.address?.city || ''}, ${customer.address?.state || ''}</div>
-                                    <div class="customer-detail">${customer.address?.zipCode || ''}</div>
-                                </div>
-                            </td>
-                            <td>${new Date(customer.createdAt).toLocaleDateString()}</td>
-                            <td>
-                                <span class="status-badge completed">${customer.bookingCount || 0} bookings</span>
+                                <span class="status-badge completed">${customer.bookingCount || 0}</span>
                             </td>
                             <td>
                                 <strong>₹${(customer.totalSpent || 0).toLocaleString()}</strong>
-                            </td>
-                            <td>
-                                <span class="status-badge ${customer.isActive ? 'completed' : 'cancelled'}">
-                                    ${customer.isActive ? 'Active' : 'Inactive'}
-                                </span>
                             </td>
                         </tr>
                     `).join('')}
@@ -472,20 +494,9 @@ async function loadCarsManagement() {
         console.log('🚗 Loading cars...');
         showLoading('carsList', 'Loading cars...');
         
-        const response = await fetch(`${API_BASE}/admin/cars`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Cars API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(`${API_BASE}/admin/cars`);
         const result = await response.json();
+        
         console.log('🚗 Cars API Response:', result);
         
         if (result.success) {
@@ -520,13 +531,12 @@ function displayCars(cars) {
             <table class="bookings-table">
                 <thead>
                     <tr>
-                        <th>Car Image</th>
-                        <th>Car Details</th>
-                        <th>Specifications</th>
-                        <th>Pricing</th>
+                        <th>Car</th>
+                        <th>Type</th>
+                        <th>Price/Day</th>
                         <th>Bookings</th>
                         <th>Revenue</th>
-                        <th>Availability</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -534,32 +544,15 @@ function displayCars(cars) {
                     ${cars.map(car => `
                         <tr>
                             <td>
-                                <img src="${car.images?.[0]?.url || 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'}" 
-                                     alt="${car.make} ${car.model}" 
-                                     style="width: 60px; height: 40px; object-fit: cover; border-radius: 5px;">
-                            </td>
-                            <td>
                                 <div class="customer-info">
                                     <div class="customer-name">${car.make} ${car.model}</div>
-                                    <div class="customer-detail">${car.year} • ${car.type}</div>
-                                    <div class="customer-detail">${car.registrationNumber || 'N/A'}</div>
+                                    <div class="customer-detail">${car.year}</div>
                                 </div>
                             </td>
+                            <td>${car.type}</td>
+                            <td>₹${car.pricePerDay}</td>
                             <td>
-                                <div class="customer-info">
-                                    <div class="customer-detail">${car.fuelType} • ${car.transmission}</div>
-                                    <div class="customer-detail">${car.seats} seats • ${car.color}</div>
-                                    <div class="customer-detail">${car.mileage || 'N/A'}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="customer-info">
-                                    <div class="customer-detail">₹${car.pricePerHour}/hour</div>
-                                    <div class="customer-detail">₹${car.pricePerDay}/day</div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-badge completed">${car.bookingCount || 0} bookings</span>
+                                <span class="status-badge completed">${car.bookingCount || 0}</span>
                             </td>
                             <td>
                                 <strong>₹${(car.totalRevenue || 0).toLocaleString()}</strong>
@@ -597,20 +590,9 @@ async function loadReports() {
         
         const period = document.getElementById('reportPeriod')?.value || '30';
         
-        const response = await fetch(`${API_BASE}/admin/reports?period=${period}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Reports API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(`${API_BASE}/admin/reports?period=${period}`);
         const result = await response.json();
+        
         console.log('📈 Reports API Response:', result);
         
         if (result.success) {
@@ -640,117 +622,71 @@ function displayReports(reports) {
         return;
     }
     
-    // Booking Trends Chart (simplified)
-    const bookingTrendsHTML = reports.bookingTrends && reports.bookingTrends.length > 0 ? `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Booking Trends (Last ${reports.period} Days)</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
-                ${reports.bookingTrends.slice(-7).map(day => `
-                    <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 6px;">
-                        <div style="font-size: 0.8rem; color: #64748b;">${new Date(day._id).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                        <div style="font-size: 1.2rem; font-weight: bold; color: #3b82f6;">${day.count}</div>
-                        <div style="font-size: 0.7rem; color: #10b981;">₹${day.revenue}</div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    ` : `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Booking Trends</h4>
-            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px;">
-                <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
-                <p>No booking data available for the selected period</p>
-            </div>
-        </div>
-    `;
+    let reportsHTML = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">';
     
     // Revenue by Car Type
-    const revenueByTypeHTML = reports.revenueByCarType && reports.revenueByCarType.length > 0 ? `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Revenue by Car Type</h4>
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                ${reports.revenueByCarType.map(type => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
-                        <span style="font-weight: 500;">${type._id}</span>
-                        <div style="text-align: right;">
-                            <div style="font-weight: bold; color: #1e293b;">₹${type.revenue.toLocaleString()}</div>
-                            <div style="font-size: 0.8rem; color: #64748b;">${type.bookings} bookings</div>
+    if (reports.revenueByCarType && reports.revenueByCarType.length > 0) {
+        reportsHTML += `
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Revenue by Car Type</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    ${reports.revenueByCarType.map(type => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                            <span style="font-weight: 500;">${type._id}</span>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; color: #1e293b;">₹${type.revenue.toLocaleString()}</div>
+                                <div style="font-size: 0.8rem; color: #64748b;">${type.bookings} bookings</div>
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
             </div>
-        </div>
-    ` : `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Revenue by Car Type</h4>
-            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px;">
-                <i class="fas fa-chart-pie" style="font-size: 2rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
-                <p>No revenue data available</p>
-            </div>
-        </div>
-    `;
+        `;
+    }
     
     // Popular Cars
-    const popularCarsHTML = reports.popularCars && reports.popularCars.length > 0 ? `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Popular Cars</h4>
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                ${reports.popularCars.slice(0, 5).map(car => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
-                        <span style="font-weight: 500;">${car._id.make} ${car._id.model}</span>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.8rem; color: #64748b;">${car.bookings} bookings</div>
-                            <div style="font-weight: bold; color: #10b981;">₹${car.revenue.toLocaleString()}</div>
+    if (reports.popularCars && reports.popularCars.length > 0) {
+        reportsHTML += `
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Popular Cars</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    ${reports.popularCars.slice(0, 5).map(car => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                            <span style="font-weight: 500;">${car._id.make} ${car._id.model}</span>
+                            <div style="text-align: right;">
+                                <div style="font-size: 0.8rem; color: #64748b;">${car.bookings} bookings</div>
+                                <div style="font-weight: bold; color: #10b981;">₹${car.revenue.toLocaleString()}</div>
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
             </div>
-        </div>
-    ` : `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Popular Cars</h4>
-            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px;">
-                <i class="fas fa-car" style="font-size: 2rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
-                <p>No car booking data available</p>
-            </div>
-        </div>
-    `;
+        `;
+    }
     
     // Top Customers
-    const topCustomersHTML = reports.topCustomers && reports.topCustomers.length > 0 ? `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Top Customers</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-                ${reports.topCustomers.slice(0, 6).map(customer => `
-                    <div style="padding: 1rem; background: #f8fafc; border-radius: 6px; border-left: 4px solid #3b82f6;">
-                        <div style="font-weight: 600; margin-bottom: 0.5rem;">${customer.name}</div>
-                        <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem;">${customer.email}</div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="font-size: 0.8rem;">${customer.bookings} bookings</span>
-                            <span style="font-weight: bold; color: #10b981;">₹${customer.totalSpent.toLocaleString()}</span>
+    if (reports.topCustomers && reports.topCustomers.length > 0) {
+        reportsHTML += `
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
+                <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Top Customers</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    ${reports.topCustomers.slice(0, 6).map(customer => `
+                        <div style="padding: 1rem; background: #f8fafc; border-radius: 6px; border-left: 4px solid #3b82f6;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">${customer.name}</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem;">${customer.email}</div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="font-size: 0.8rem;">${customer.bookings} bookings</span>
+                                <span style="font-weight: bold; color: #10b981;">₹${customer.totalSpent.toLocaleString()}</span>
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
             </div>
-        </div>
-    ` : `
-        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
-            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Top Customers</h4>
-            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px;">
-                <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
-                <p>No customer data available</p>
-            </div>
-        </div>
-    `;
+        `;
+    }
     
-    container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            ${revenueByTypeHTML}
-            ${popularCarsHTML}
-            ${bookingTrendsHTML}
-            ${topCustomersHTML}
-        </div>
-    `;
+    reportsHTML += '</div>';
+    container.innerHTML = reportsHTML;
 }
 
 // Update car availability
@@ -764,23 +700,12 @@ async function updateCarAvailability(carId, available) {
     try {
         console.log(`🔄 Updating car ${carId} availability to ${available}`);
         
-        const response = await fetch(`${API_BASE}/admin/cars/${carId}/availability`, {
+        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}/availability`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
             body: JSON.stringify({ available: available === 'true' })
         });
-        
-        console.log('📡 Update Car Availability API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+
         const result = await response.json();
-        console.log('📡 Update Car Availability API Response:', result);
         
         if (result.success) {
             showNotification(`Car availability updated successfully`, 'success');
@@ -800,21 +725,8 @@ async function showBookingDetails(bookingId) {
     try {
         console.log(`📋 Loading booking details for: ${bookingId}`);
         
-        const response = await fetch(`${API_BASE}/admin/bookings/${bookingId}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Booking Details API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await mobileFetch(`${API_BASE}/admin/bookings/${bookingId}`);
         const result = await response.json();
-        console.log('📋 Booking Details API Response:', result);
         
         if (result.success) {
             displayBookingDetails(result.booking);
@@ -852,14 +764,6 @@ function displayBookingDetails(booking) {
                         <span style="font-weight: 600; color: #475569;">Phone:</span>
                         <span>${booking.user?.phone || 'N/A'}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Address:</span>
-                        <span style="text-align: right;">
-                            ${booking.user?.address ? 
-                                `${booking.user.address.street || ''}, ${booking.user.address.city || ''}, ${booking.user.address.state || ''}` : 
-                                'N/A'}
-                        </span>
-                    </div>
                 </div>
             </div>
             
@@ -888,22 +792,6 @@ function displayBookingDetails(booking) {
                         <span style="font-weight: 600; color: #475569;">Transmission:</span>
                         <span>${booking.car?.transmission || 'N/A'}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Seats:</span>
-                        <span>${booking.car?.seats || 'N/A'}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Registration:</span>
-                        <span>${booking.car?.registrationNumber || 'N/A'}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Daily Rate:</span>
-                        <span>₹${booking.car?.pricePerDay || 'N/A'}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Hourly Rate:</span>
-                        <span>₹${booking.car?.pricePerHour || 'N/A'}</span>
-                    </div>
                 </div>
             </div>
             
@@ -912,10 +800,6 @@ function displayBookingDetails(booking) {
                     <i class="fas fa-calendar-alt" style="color: #f59e0b;"></i> Booking Details
                 </h4>
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Booking ID:</span>
-                        <span style="font-family: monospace;">${booking._id}</span>
-                    </div>
                     <div style="display: flex; justify-content: space-between;">
                         <span style="font-weight: 600; color: #475569;">Start Date:</span>
                         <span>${new Date(booking.startDate).toLocaleString()}</span>
@@ -938,36 +822,6 @@ function displayBookingDetails(booking) {
                     </div>
                 </div>
             </div>
-            
-            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px;">
-                <h4 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-map-marker-alt" style="color: #ef4444;"></i> Location Details
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Pickup Location:</span>
-                        <span style="text-align: right;">${booking.pickupLocation?.address || 'N/A'}, ${booking.pickupLocation?.city || 'N/A'}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Dropoff Location:</span>
-                        <span style="text-align: right;">${booking.dropoffLocation?.address || 'N/A'}, ${booking.dropoffLocation?.city || 'N/A'}</span>
-                    </div>
-                </div>
-                
-                <h4 style="margin: 1.5rem 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-history" style="color: #8b5cf6;"></i> Timeline
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Booking Created:</span>
-                        <span>${new Date(booking.createdAt).toLocaleString()}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; color: #475569;">Last Updated:</span>
-                        <span>${new Date(booking.updatedAt).toLocaleString()}</span>
-                    </div>
-                </div>
-            </div>
         </div>
     `;
 }
@@ -976,6 +830,12 @@ function displayBookingDetails(booking) {
 async function updateBookingStatus(bookingId, status) {
     if (!status) return;
     
+    let adminNotes = '';
+    if (status === 'confirmed') {
+        adminNotes = prompt('Add any notes for this confirmation (optional):');
+        if (adminNotes === null) return; // User cancelled
+    }
+    
     if (!confirm(`Are you sure you want to change booking status to "${status}"?`)) {
         return;
     }
@@ -983,23 +843,15 @@ async function updateBookingStatus(bookingId, status) {
     try {
         console.log(`🔄 Updating booking ${bookingId} status to ${status}`);
         
-        const response = await fetch(`${API_BASE}/admin/bookings/${bookingId}/status`, {
+        const response = await mobileFetch(`${API_BASE}/admin/bookings/${bookingId}/status`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ 
+                status,
+                adminNotes: adminNotes || undefined
+            })
         });
-        
-        console.log('📡 Update Status API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+
         const result = await response.json();
-        console.log('📡 Update Status API Response:', result);
         
         if (result.success) {
             showNotification(`Booking status updated to ${status}`, 'success');
@@ -1036,6 +888,8 @@ function closeModal(modalId) {
 
 // Logout
 function logout() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
     if (confirm('Are you sure you want to logout from admin dashboard?')) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -1045,7 +899,6 @@ function logout() {
 
 // Show notification
 function showNotification(message, type) {
-    // Create notification element
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -1058,7 +911,8 @@ function showNotification(message, type) {
         z-index: 10000;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         animation: slideInRight 0.3s ease;
-        max-width: 400px;
+        max-width: 90vw;
+        word-wrap: break-word;
     `;
     
     notification.innerHTML = `
@@ -1078,7 +932,6 @@ function showNotification(message, type) {
     
     document.body.appendChild(notification);
     
-    // Auto remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.remove();
@@ -1086,154 +939,4 @@ function showNotification(message, type) {
     }, 5000);
 }
 
-console.log('✅ Admin Dashboard JavaScript loaded successfully!'); 
-
-// Update the updateBookingStatus function in admin.js
-async function updateBookingStatus(bookingId, status) {
-    if (!status) return;
-    
-    let adminNotes = '';
-    if (status === 'confirmed') {
-        adminNotes = prompt('Add any notes for this confirmation (optional):');
-        if (adminNotes === null) return; // User cancelled
-    }
-    
-    if (!confirm(`Are you sure you want to change booking status to "${status}"?`)) {
-        return;
-    }
-    
-    try {
-        console.log(`🔄 Updating booking ${bookingId} status to ${status}`);
-        
-        const response = await fetch(`${API_BASE}/admin/bookings/${bookingId}/status`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ 
-                status,
-                adminNotes: adminNotes || undefined
-            })
-        });
-        
-        console.log('📡 Update Status API Response Status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('📡 Update Status API Response:', result);
-        
-        if (result.success) {
-            showNotification(`Booking status updated to ${status}`, 'success');
-            loadAllBookings();
-            loadDashboardStats();
-            loadRecentBookings();
-            console.log('✅ Booking status updated successfully');
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error) {
-        console.error('❌ Error updating booking status:', error);
-        showNotification('Error updating status: ' + error.message, 'error');
-    }
-}
-
-// Add to admin.js - Show temporary notification for admin
-function showTemporaryNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `temporary-notification ${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 100px;
-        left: 20px;
-        background: white;
-        color: black;
-        padding: 12px 20px;
-        border-radius: 6px;
-        z-index: 9999;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
-        font-weight: 500;
-        border-left: 4px solid;
-        max-width: 400px;
-        word-wrap: break-word;
-    `;
-    
-    const borderColor = type === 'success' ? '#10b981' : 
-                       type === 'error' ? '#ef4444' : 
-                       type === 'warning' ? '#f59e0b' : '#3b82f6';
-    
-    notification.style.borderLeftColor = borderColor;
-    
-    const icon = type === 'success' ? '✅' : 
-                type === 'error' ? '❌' : 
-                type === 'warning' ? '⚠️' : 'ℹ️';
-    
-    notification.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.1em;">${icon}</span>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 3000);
-}
-
-// Update admin logout function
-function logout() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    // Show logout notification
-    showTemporaryNotification(`👋 Goodbye, ${user.name || 'Admin'}!`, 'info');
-    
-    if (confirm('Are you sure you want to logout from admin dashboard?')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = 'index.html';
-    }
-}
-
-// Enhanced API call with error handling
-async function makeApiCall(url, options = {}) {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      ...options
-    });
-
-    if (response.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = 'index.html';
-      throw new Error('Session expired. Please login again.');
-    }
-
-    if (response.status === 403) {
-      throw new Error('Access denied. Admin privileges required.');
-    }
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API Call Error:', error);
-    throw error;
-  }
-}
-
+console.log('✅ Admin Dashboard JavaScript loaded successfully!');

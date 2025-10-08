@@ -23,12 +23,7 @@ const auth = async (req, res, next) => {
     }
 
     // Double-check admin role for fixed admin emails
-    const adminEmails = [
-      'ramanaidupalla359@gmail.com',
-      'nleelasairamnakka@gmail.com'
-    ];
-    
-    const isFixedAdmin = adminEmails.includes(user.email.toLowerCase());
+    const isFixedAdmin = User.adminEmails.includes(user.email.toLowerCase());
     if (isFixedAdmin && user.role !== 'admin') {
       user.role = 'admin';
       await user.save();
@@ -47,6 +42,7 @@ const auth = async (req, res, next) => {
 };
 
 // Admin middleware
+// FIXED admin middleware
 const admin = async (req, res, next) => {
   try {
     // Check if user exists and has admin role
@@ -58,17 +54,12 @@ const admin = async (req, res, next) => {
     }
 
     // Check both role and fixed admin emails
-    const adminEmails = [
-      'ramanaidupalla359@gmail.com',
-      'nleelasairamnakka@gmail.com'
-    ];
-    
     const isAdmin = req.user.role === 'admin' || 
-                   adminEmails.includes(req.user.email.toLowerCase());
+                   User.adminEmails.includes(req.user.email.toLowerCase());
     
     if (isAdmin) {
       // Ensure role is correctly set
-      if (adminEmails.includes(req.user.email.toLowerCase()) && req.user.role !== 'admin') {
+      if (User.adminEmails.includes(req.user.email.toLowerCase()) && req.user.role !== 'admin') {
         req.user.role = 'admin';
         await req.user.save();
         console.log(`🔄 Fixed admin role for: ${req.user.email}`);
