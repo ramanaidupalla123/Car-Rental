@@ -51,17 +51,23 @@ const carSchema = new mongoose.Schema({
     unique: true,
     sparse: true
   },
-  features: [String],
+  features: { 
+    type: [String], 
+    default: ['AC', 'Music System', 'Power Steering']
+  },
   images: [{
-    url: String,
+    url: { 
+      type: String, 
+      default: 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
+    },
     alt: String
   }],
   available: { 
     type: Boolean, 
     default: true 
   },
-  color: String,
-  mileage: String,
+  color: { type: String, default: 'White' },
+  mileage: { type: String, default: '15 kmpl' },
   location: {
     address: { type: String, default: 'Naidu Car Rentals Main Branch' },
     city: { type: String, default: 'Hyderabad' },
@@ -73,6 +79,17 @@ const carSchema = new mongoose.Schema({
   description: String
 }, {
   timestamps: true
+});
+
+// Middleware to ensure at least one image exists
+carSchema.pre('save', function(next) {
+  if (!this.images || this.images.length === 0) {
+    this.images = [{
+      url: 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+      alt: `${this.make} ${this.model}`
+    }];
+  }
+  next();
 });
 
 module.exports = mongoose.model('Car', carSchema);

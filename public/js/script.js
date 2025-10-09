@@ -357,7 +357,7 @@ function setupDateInputs() {
     }
 }
 
-// Load cars from API
+// Load cars from API - UPDATED VERSION
 async function loadCars() {
     try {
         console.log('🚗 Loading cars from API...');
@@ -366,17 +366,24 @@ async function loadCars() {
         const response = await mobileFetch(`${API_BASE}/cars`);
         
         const result = await response.json();
-        console.log('✅ Cars API response:', result);
+        console.log('✅ Cars API response received');
+        console.log('📊 Cars data:', result);
         
         if (result.success) {
             cars = result.cars || [];
             console.log(`🎯 Loaded ${cars.length} cars from database`);
             
-            if (cars.length === 0) {
-                loadSampleCars();
-            } else {
-                displayCars(cars);
+            // Debug: Check first car's images
+            if (cars.length > 0) {
+                console.log('🔍 First car details:', {
+                    make: cars[0].make,
+                    model: cars[0].model,
+                    images: cars[0].images,
+                    imageUrl: getCarImage(cars[0])
+                });
             }
+            
+            displayCars(cars);
         } else {
             throw new Error(result.message || 'Failed to load cars');
         }
@@ -518,7 +525,7 @@ function loadSampleCars() {
     displayCars(cars);
 }
 
-// Display cars in grid
+// Display cars in grid with improved image handling
 function displayCars(carsToDisplay) {
     const container = document.getElementById('carsContainer');
     
@@ -539,59 +546,109 @@ function displayCars(carsToDisplay) {
         return;
     }
     
-    container.innerHTML = carsToDisplay.map(car => `
-        <div class="car-card" data-brand="${car.make.toLowerCase()}" data-type="${car.type}">
-            <div class="car-image-container">
-                <img src="${getCarImage(car)}" 
-                     alt="${car.make} ${car.model}" 
-                     class="car-image"
-                     onerror="this.src='https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
-                ${!car.available ? '<div class="car-unavailable">Not Available</div>' : ''}
-            </div>
-            <div class="car-info">
-                <h3 class="car-name">${car.make} ${car.model} (${car.year})</h3>
-                <div class="car-details">
-                    <span><i class="fas fa-car"></i> ${car.type}</span>
-                    <span><i class="fas fa-users"></i> ${car.seats} Seats</span>
-                    <span><i class="fas fa-cog"></i> ${car.transmission}</span>
-                </div>
-                <div class="car-features">
-                    <small><i class="fas fa-gas-pump"></i> ${car.fuelType} • ${car.mileage || '15 kmpl'}</small>
-                </div>
-                <div class="car-features">
-                    <small>${car.features ? car.features.slice(0, 3).join(' • ') : 'Premium features included'}</small>
-                </div>
-                <div class="car-price">
-                    <span class="price-main">₹${car.pricePerHour}/hour</span>
-                    <span class="price-alt">or ₹${car.pricePerDay}/day</span>
-                </div>
-                <button class="book-btn" onclick="showBookingForm('${car._id}')" 
-                    ${!car.available ? 'disabled' : ''}>
-                    ${car.available ? '<i class="fas fa-calendar-plus"></i> Book Now' : 'Not Available'}
-                </button>
-            </div>
+    // In displayCars function, update the image tag:
+container.innerHTML = carsToDisplay.map(car => {
+    const carImage = getCarImage(car);
+    console.log(`🎯 Rendering: ${car.make} ${car.model}`);
+    console.log(`   Image URL: ${carImage}`);
+    
+    return `
+    <div class="car-card" data-brand="${car.make.toLowerCase()}" data-type="${car.type}">
+        <div class="car-image-container">
+            <img src="${carImage}" 
+                 alt="${car.make} ${car.model}" 
+                 class="car-image"
+                 loading="lazy"
+                 onerror="handleImageError(this, '${car.make}', '${car.model}')">
+            ${!car.available ? '<div class="car-unavailable">Not Available</div>' : ''}
         </div>
-    `).join('');
+        <div class="car-info">
+            <h3 class="car-name">${car.make} ${car.model} (${car.year})</h3>
+            <div class="car-details">
+                <span><i class="fas fa-car"></i> ${car.type}</span>
+                <span><i class="fas fa-users"></i> ${car.seats} Seats</span>
+                <span><i class="fas fa-cog"></i> ${car.transmission}</span>
+            </div>
+            <div class="car-features">
+                <small><i class="fas fa-gas-pump"></i> ${car.fuelType} • ${car.mileage || '15 kmpl'}</small>
+            </div>
+            <div class="car-features">
+                <small>${car.features ? car.features.slice(0, 3).join(' • ') : 'Premium features included'}</small>
+            </div>
+            <div class="car-price">
+                <span class="price-main">₹${car.pricePerHour}/hour</span>
+                <span class="price-alt">or ₹${car.pricePerDay}/day</span>
+            </div>
+            <button class="book-btn" onclick="showBookingForm('${car._id}')" 
+                ${!car.available ? 'disabled' : ''}>
+                ${car.available ? '<i class="fas fa-calendar-plus"></i> Book Now' : 'Not Available'}
+            </button>
+        </div>
+    </div>
+`}).join('');
     
     console.log(`✅ Displayed ${carsToDisplay.length} cars`);
 }
 
-// Helper function to get car image
+// Guaranteed image function with multiple fallbacks
 function getCarImage(car) {
-    if (car.images && car.images[0] && car.images[0].url) {
-        return car.images[0].url;
+    console.log('🖼️ Getting image for car:', car.make, car.model);
+    
+    // First, check if the car has a valid image URL in database
+    if (car.images && Array.isArray(car.images) && car.images.length > 0) {
+        const firstImage = car.images[0];
+        if (firstImage && firstImage.url && firstImage.url.startsWith('http')) {
+            console.log('✅ Using database image URL:', firstImage.url);
+            return firstImage.url;
+        }
     }
     
-    // Default images based on car make
-    const defaultImages = {
-        'mahindra': 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        'toyota': 'https://images.unsplash.com/photo-1621135802920-133df287f89c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        'maruti': 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        'hyundai': 'https://images.unsplash.com/photo-1621135802920-133df287f89c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
+    // If database image fails, use guaranteed Unsplash images
+    const guaranteedImages = {
+        // Maruti Suzuki
+        'maruti suzuki swift': 'https://www.popularmaruti.com/blog/wp-content/uploads/2023/07/How-the-Maruti-Suzuki-Swift-Adapts-the-Lifestyle-of-Indian-Automobile-Enthusiasts.jpg',
+        'maruti suzuki dzire': 'https://www.carblogindia.com/wp-content/uploads/2017/05/2017-maruti-dzire-review-images-4.jpg',
+        'maruti suzuki ertiga': 'https://sribalajitravels.co/wp-content/uploads/2024/12/ERTIGA-e1737835789946.jpg',
+        
+        // Hyundai
+        'hyundai creta': 'https://stimg.cardekho.com/images/carexteriorimages/930x620/Hyundai/Creta/7695/1651645683867/front-left-side-47.jpg',
+        'hyundai venue': 'https://www.usnews.com/object/image/00000191-ebcd-d396-a1ff-fbdf35860001/01-usnpx-2025hyundaivenue-angularfront-jms.jpg?update-time=1726238473076&size=responsiveGallery&format=webp',
+        
+        // Toyota
+        'toyota innova crysta': 'https://imgd.aeplcdn.com/1920x1080/n/cw/ec/140809/innova-crysta-exterior-right-front-three-quarter-2.png?isig=0&q=80&q=80',
+        'toyota fortuner': 'https://imgd.aeplcdn.com/664x374/n/cw/ec/44709/fortuner-exterior-left-front-three-quarter.jpeg?q=80',
+        
+        // Mahindra
+        'mahindra thar': 'https://motoringworld.in/wp-content/uploads/2024/08/Screenshot-2024-08-13-at-5.43.04-PM.png',
+        'mahindra scorpio': 'https://imgd-ct.aeplcdn.com/1056x594/n/cw/ec/40432/scorpio-n-exterior-right-front-three-quarter-75.jpeg?isig=0&q=80'
     };
     
-    return defaultImages[car.make.toLowerCase()] || 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+    const carKey = `${car.make.toLowerCase()} ${car.model.toLowerCase()}`;
+    const guaranteedImage = guaranteedImages[carKey] || 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+    
+    console.log('🔄 Using guaranteed image for:', carKey);
+    return guaranteedImage;
 }
+
+// Image error handler
+function handleImageError(img, make, model) {
+    console.error(`❌ Image failed to load for ${make} ${model}`);
+    
+    // Fallback images based on car type
+    const fallbackByType = {
+        'SUV': 'https://images.unsplash.com/photo-1621135802920-133df287f89c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        'Sedan': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        'Hatchback': 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        'MPV': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
+    };
+    
+    const carType = document.querySelector(`[data-brand="${make.toLowerCase()}"][data-type]`)?.getAttribute('data-type') || 'SUV';
+    const fallback = fallbackByType[carType] || 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+    
+    img.src = fallback;
+    img.alt = `${make} ${model} - Car Image`;
+}
+
 
 // Filter cars by brand
 function filterCars(brand) {

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Car = require('../models/Car');
 
-// Get all available cars
+// Get all available cars - SIMPLIFIED VERSION
 router.get('/', async (req, res) => {
     try {
         console.log('🚗 Fetching all cars from database...');
