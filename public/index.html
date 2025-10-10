@@ -46,10 +46,10 @@
         <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
         <nav class="mobile-nav-links" id="mobileNavLinks">
             <div class="mobile-nav-header">
-                <a href="#home" class="logo">
+                <h3>
                     <i class="fas fa-car"></i>
                     Car Rentals
-                </a>
+                </h3>
                 <button class="mobile-close-btn" id="mobileCloseBtn">
                     <i class="fas fa-times"></i>
                 </button>
@@ -69,11 +69,12 @@
                     <i class="fas fa-calendar-check"></i> My Bookings
                 </a>
                 
-                <div class="mobile-auth-buttons">
-                    <button class="btn btn-primary btn-full" id="mobileLoginBtn" onclick="closeMobileMenu()">
+                <!-- Mobile Auth Buttons - Will be updated by JavaScript -->
+                <div class="mobile-auth-buttons" id="mobileAuthButtons">
+                    <button class="btn btn-primary btn-full" onclick="showLogin(); closeMobileMenu();">
                         <i class="fas fa-sign-in-alt"></i> Login
                     </button>
-                    <button class="btn btn-secondary btn-full" id="mobileRegisterBtn" onclick="closeMobileMenu()">
+                    <button class="btn btn-secondary btn-full" onclick="showRegister(); closeMobileMenu();">
                         <i class="fas fa-user-plus"></i> Register
                     </button>
                 </div>
@@ -377,12 +378,7 @@
             </div>
         </div>
     </div>
-    <!-- Add this in your navigation or user area -->
-<div id="adminLink" style="display: none; margin-left: 1rem;">
-    <a href="admin.html" class="btn btn-warning" style="background: #f59e0b; color: white;">
-        <i class="fas fa-user-shield"></i> Admin Dashboard
-    </a>
-</div>
+
     <script src="js/script.js"></script>
 </body>
 </html>

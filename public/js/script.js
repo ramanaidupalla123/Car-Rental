@@ -109,25 +109,6 @@ function initializeMobileFeatures() {
     console.log('✅ Mobile features initialized');
 }
 
-// Mobile network detection
-function checkMobileNetwork() {
-    if (navigator.connection) {
-        const connection = navigator.connection;
-        console.log('📱 Network type:', connection.effectiveType);
-        console.log('📱 Network speed:', connection.downlink + ' Mbps');
-        
-        if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
-            showNotification('Slow network detected. Some features may load slowly.', 'warning');
-        }
-        
-        // Listen for network changes
-        connection.addEventListener('change', function() {
-            console.log('📱 Network changed to:', connection.effectiveType);
-            showTemporaryNotification(`Network changed to ${connection.effectiveType}`, 'info');
-        });
-    }
-}
-
 // Setup all event listeners
 function setupEventListeners() {
     console.log('🔧 Setting up event listeners...');
@@ -206,19 +187,6 @@ function setupEventListeners() {
             }
         });
     });
-    
-    // Mobile orientation change handling
-    window.addEventListener('orientationchange', function() {
-        console.log('📱 Orientation changed:', screen.orientation.type);
-        // Small delay to allow CSS to adjust
-        setTimeout(() => {
-            if (window.innerHeight > window.innerWidth) {
-                console.log('📱 Portrait mode');
-            } else {
-                console.log('📱 Landscape mode');
-            }
-        }, 100);
-    });
 }
 
 // Mobile Navigation Functions
@@ -227,8 +195,6 @@ function initializeMobileNavigation() {
     const mobileCloseBtn = document.getElementById('mobileCloseBtn');
     const mobileNavOverlay = document.getElementById('mobileNavOverlay');
     const mobileNavLinks = document.getElementById('mobileNavLinks');
-    const mobileLoginBtn = document.getElementById('mobileLoginBtn');
-    const mobileRegisterBtn = document.getElementById('mobileRegisterBtn');
 
     // Open mobile menu
     if (mobileMenuBtn) {
@@ -245,31 +211,11 @@ function initializeMobileNavigation() {
         mobileNavOverlay.addEventListener('click', closeMobileMenu);
     }
 
-    // Mobile auth buttons
-    if (mobileLoginBtn) {
-        mobileLoginBtn.addEventListener('click', function() {
-            showLogin();
-            closeMobileMenu();
-        });
-    }
-
-    if (mobileRegisterBtn) {
-        mobileRegisterBtn.addEventListener('click', function() {
-            showRegister();
-            closeMobileMenu();
-        });
-    }
-
     // Close menu when pressing Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeMobileMenu();
         }
-    });
-    
-    // Close menu when clicking on a link
-    document.querySelectorAll('#mobileNavLinks a').forEach(link => {
-        link.addEventListener('click', closeMobileMenu);
     });
 }
 
@@ -282,7 +228,7 @@ function openMobileMenu() {
         mobileMenuBtn.classList.add('active');
         mobileNavOverlay.style.display = 'block';
         mobileNavLinks.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Prevent scrolling
+        document.body.style.overflow = 'hidden';
         console.log('📱 Mobile menu opened');
     }
 }
@@ -296,7 +242,7 @@ function closeMobileMenu() {
         mobileMenuBtn.classList.remove('active');
         mobileNavOverlay.style.display = 'none';
         mobileNavLinks.classList.remove('active');
-        document.body.style.overflow = ''; // Restore scrolling
+        document.body.style.overflow = '';
         console.log('📱 Mobile menu closed');
     }
 }
@@ -320,14 +266,6 @@ function showRegister() {
     if (registerModal) {
         registerModal.style.display = 'block';
         document.getElementById('registerForm').reset();
-    }
-}
-
-// Close modal properly
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = 'none';
     }
 }
 
@@ -357,7 +295,7 @@ function setupDateInputs() {
     }
 }
 
-// Load cars from API - UPDATED VERSION
+// Load cars from API - FIXED VERSION
 async function loadCars() {
     try {
         console.log('🚗 Loading cars from API...');
@@ -367,25 +305,24 @@ async function loadCars() {
         
         const result = await response.json();
         console.log('✅ Cars API response received');
-        console.log('📊 Cars data:', result);
+        // In loadCars() function, after cars are loaded:
+console.log('🔍 All loaded cars:');
+cars.forEach((car, index) => {
+    console.log(`${index + 1}. ${car.make} ${car.model} (ID: ${car._id})`);
+});
         
-        if (result.success) {
-            cars = result.cars || [];
+        if (result.success && result.cars) {
+            cars = result.cars;
             console.log(`🎯 Loaded ${cars.length} cars from database`);
             
-            // Debug: Check first car's images
-            if (cars.length > 0) {
-                console.log('🔍 First car details:', {
-                    make: cars[0].make,
-                    model: cars[0].model,
-                    images: cars[0].images,
-                    imageUrl: getCarImage(cars[0])
-                });
-            }
+            // Debug: Log all car IDs and names
+            cars.forEach((car, index) => {
+                console.log(`   ${index + 1}. ${car.make} ${car.model} (ID: ${car._id})`);
+            });
             
             displayCars(cars);
         } else {
-            throw new Error(result.message || 'Failed to load cars');
+            throw new Error(result.message || 'No cars data received');
         }
     } catch (error) {
         console.error('❌ Error loading cars from API:', error);
@@ -394,7 +331,7 @@ async function loadCars() {
     }
 }
 
-// Load sample cars if API fails
+// Load sample cars if API fails - FIXED VERSION
 function loadSampleCars() {
     console.log('🔄 Loading sample cars...');
     
@@ -518,6 +455,26 @@ function loadSampleCars() {
             available: true,
             color: 'Blue',
             mileage: '13 kmpl'
+        },
+        {
+            _id: '7',
+            make: 'Hyundai',
+            model: 'Venue',
+            year: 2024,
+            type: 'SUV',
+            pricePerDay: 2000,
+            pricePerHour: 250,
+            fuelType: 'Petrol',
+            transmission: 'Manual',
+            seats: 5,
+            features: ['AC', 'Touchscreen', 'Rear Camera', 'Sunroof'],
+            images: [{ 
+                url: 'https://images.unsplash.com/photo-1621135802920-133df287f89c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', 
+                alt: 'Hyundai Venue' 
+            }],
+            available: true,
+            color: 'White',
+            mileage: '18 kmpl'
         }
     ];
     
@@ -525,7 +482,7 @@ function loadSampleCars() {
     displayCars(cars);
 }
 
-// Display cars in grid with improved image handling
+// Display cars in grid - FIXED VERSION
 function displayCars(carsToDisplay) {
     const container = document.getElementById('carsContainer');
     
@@ -546,88 +503,68 @@ function displayCars(carsToDisplay) {
         return;
     }
     
-    // In displayCars function, update the image tag:
-container.innerHTML = carsToDisplay.map(car => {
-    const carImage = getCarImage(car);
-    console.log(`🎯 Rendering: ${car.make} ${car.model}`);
-    console.log(`   Image URL: ${carImage}`);
+    console.log(`🔄 Displaying ${carsToDisplay.length} cars`);
     
-    return `
-    <div class="car-card" data-brand="${car.make.toLowerCase()}" data-type="${car.type}">
-        <div class="car-image-container">
-            <img src="${carImage}" 
-                 alt="${car.make} ${car.model}" 
-                 class="car-image"
-                 loading="lazy"
-                 onerror="handleImageError(this, '${car.make}', '${car.model}')">
-            ${!car.available ? '<div class="car-unavailable">Not Available</div>' : ''}
+    container.innerHTML = carsToDisplay.map(car => {
+        const carImage = getCarImage(car);
+        
+        return `
+        <div class="car-card" data-brand="${car.make.toLowerCase()}" data-type="${car.type}">
+            <div class="car-image-container">
+                <img src="${carImage}" 
+                     alt="${car.make} ${car.model}" 
+                     class="car-image"
+                     loading="lazy"
+                     onerror="handleImageError(this, '${car.make}', '${car.model}')">
+                ${!car.available ? '<div class="car-unavailable">Not Available</div>' : ''}
+            </div>
+            <div class="car-info">
+                <h3 class="car-name">${car.make} ${car.model} (${car.year})</h3>
+                <div class="car-details">
+                    <span><i class="fas fa-car"></i> ${car.type}</span>
+                    <span><i class="fas fa-users"></i> ${car.seats} Seats</span>
+                    <span><i class="fas fa-cog"></i> ${car.transmission}</span>
+                </div>
+                <div class="car-features">
+                    <small><i class="fas fa-gas-pump"></i> ${car.fuelType} • ${car.mileage || '15 kmpl'}</small>
+                </div>
+                <div class="car-features">
+                    <small>${car.features ? car.features.slice(0, 3).join(' • ') : 'Premium features included'}</small>
+                </div>
+                <div class="car-price">
+                    <span class="price-main">₹${car.pricePerHour}/hour</span>
+                    <span class="price-alt">or ₹${car.pricePerDay}/day</span>
+                </div>
+                <button class="book-btn" onclick="showBookingForm('${car._id}')" 
+                    ${!car.available ? 'disabled' : ''}>
+                    ${car.available ? '<i class="fas fa-calendar-plus"></i> Book Now' : 'Not Available'}
+                </button>
+            </div>
         </div>
-        <div class="car-info">
-            <h3 class="car-name">${car.make} ${car.model} (${car.year})</h3>
-            <div class="car-details">
-                <span><i class="fas fa-car"></i> ${car.type}</span>
-                <span><i class="fas fa-users"></i> ${car.seats} Seats</span>
-                <span><i class="fas fa-cog"></i> ${car.transmission}</span>
-            </div>
-            <div class="car-features">
-                <small><i class="fas fa-gas-pump"></i> ${car.fuelType} • ${car.mileage || '15 kmpl'}</small>
-            </div>
-            <div class="car-features">
-                <small>${car.features ? car.features.slice(0, 3).join(' • ') : 'Premium features included'}</small>
-            </div>
-            <div class="car-price">
-                <span class="price-main">₹${car.pricePerHour}/hour</span>
-                <span class="price-alt">or ₹${car.pricePerDay}/day</span>
-            </div>
-            <button class="book-btn" onclick="showBookingForm('${car._id}')" 
-                ${!car.available ? 'disabled' : ''}>
-                ${car.available ? '<i class="fas fa-calendar-plus"></i> Book Now' : 'Not Available'}
-            </button>
-        </div>
-    </div>
-`}).join('');
+    `}).join('');
     
     console.log(`✅ Displayed ${carsToDisplay.length} cars`);
 }
 
-// Guaranteed image function with multiple fallbacks
+// Guaranteed image function
 function getCarImage(car) {
-    console.log('🖼️ Getting image for car:', car.make, car.model);
-    
     // First, check if the car has a valid image URL in database
     if (car.images && Array.isArray(car.images) && car.images.length > 0) {
         const firstImage = car.images[0];
         if (firstImage && firstImage.url && firstImage.url.startsWith('http')) {
-            console.log('✅ Using database image URL:', firstImage.url);
             return firstImage.url;
         }
     }
     
-    // If database image fails, use guaranteed Unsplash images
-    const guaranteedImages = {
-        // Maruti Suzuki
-        'maruti suzuki swift': 'https://www.popularmaruti.com/blog/wp-content/uploads/2023/07/How-the-Maruti-Suzuki-Swift-Adapts-the-Lifestyle-of-Indian-Automobile-Enthusiasts.jpg',
-        'maruti suzuki dzire': 'https://www.carblogindia.com/wp-content/uploads/2017/05/2017-maruti-dzire-review-images-4.jpg',
-        'maruti suzuki ertiga': 'https://sribalajitravels.co/wp-content/uploads/2024/12/ERTIGA-e1737835789946.jpg',
-        
-        // Hyundai
-        'hyundai creta': 'https://stimg.cardekho.com/images/carexteriorimages/930x620/Hyundai/Creta/7695/1651645683867/front-left-side-47.jpg',
-        'hyundai venue': 'https://www.usnews.com/object/image/00000191-ebcd-d396-a1ff-fbdf35860001/01-usnpx-2025hyundaivenue-angularfront-jms.jpg?update-time=1726238473076&size=responsiveGallery&format=webp',
-        
-        // Toyota
-        'toyota innova crysta': 'https://imgd.aeplcdn.com/1920x1080/n/cw/ec/140809/innova-crysta-exterior-right-front-three-quarter-2.png?isig=0&q=80&q=80',
-        'toyota fortuner': 'https://imgd.aeplcdn.com/664x374/n/cw/ec/44709/fortuner-exterior-left-front-three-quarter.jpeg?q=80',
-        
-        // Mahindra
-        'mahindra thar': 'https://motoringworld.in/wp-content/uploads/2024/08/Screenshot-2024-08-13-at-5.43.04-PM.png',
-        'mahindra scorpio': 'https://imgd-ct.aeplcdn.com/1056x594/n/cw/ec/40432/scorpio-n-exterior-right-front-three-quarter-75.jpeg?isig=0&q=80'
+    // Fallback images based on car make
+    const fallbackImages = {
+        'Mahindra': 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        'Toyota': 'https://images.unsplash.com/photo-1621135802920-133df287f89c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        'Maruti Suzuki': 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+        'Hyundai': 'https://images.unsplash.com/photo-1621135802920-133df287f89c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
     };
     
-    const carKey = `${car.make.toLowerCase()} ${car.model.toLowerCase()}`;
-    const guaranteedImage = guaranteedImages[carKey] || 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-    
-    console.log('🔄 Using guaranteed image for:', carKey);
-    return guaranteedImage;
+    return fallbackImages[car.make] || 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
 }
 
 // Image error handler
@@ -648,7 +585,6 @@ function handleImageError(img, make, model) {
     img.src = fallback;
     img.alt = `${make} ${model} - Car Image`;
 }
-
 
 // Filter cars by brand
 function filterCars(brand) {
@@ -711,16 +647,21 @@ function searchCars() {
     applyAllFilters();
 }
 
-// Show booking form
+// Show booking form - FIXED VERSION
 async function showBookingForm(carId) {
+    console.log('📅 Show booking form for car ID:', carId);
+    
     if (!currentUser) {
         showNotification('Please login to book a car', 'warning');
         showLogin();
         return;
     }
 
-    selectedCar = cars.find(car => car._id === carId);
+    // Find car by ID - FIXED: Use proper ID comparison
+    selectedCar = cars.find(car => car._id === carId || car._id.toString() === carId);
+    
     if (!selectedCar) {
+        console.error('❌ Car not found with ID:', carId);
         showNotification('Car not found', 'error');
         return;
     }
@@ -729,6 +670,8 @@ async function showBookingForm(carId) {
         showNotification('This car is not available for booking', 'warning');
         return;
     }
+
+    console.log('✅ Selected car:', selectedCar.make, selectedCar.model);
 
     // Pre-fill user details
     document.getElementById('customerName').value = currentUser.name;
@@ -798,7 +741,6 @@ function updateEndDate() {
 // Handle registration
 async function handleRegister(e) {
     e.preventDefault();
-    console.log('📝 Registration form submitted');
     
     const userData = {
         name: document.getElementById('regName').value,
@@ -808,9 +750,6 @@ async function handleRegister(e) {
         address: document.getElementById('regAddress').value
     };
 
-    console.log('👤 Registration data:', userData);
-
-    // Validate required fields
     if (!userData.name || !userData.email || !userData.password || !userData.phone) {
         showNotification('Please fill all required fields', 'error');
         return;
@@ -825,21 +764,18 @@ async function handleRegister(e) {
         });
 
         const result = await response.json();
-        console.log('📊 Registration response:', result);
 
         if (result.success) {
             localStorage.setItem('token', result.token);
             localStorage.setItem('user', JSON.stringify(result.user));
             currentUser = result.user;
             
-            // Initialize session management after registration
             initializeSessionManagement();
             
-            closeModal('registerModal');
+            closeAllModals();
             updateUI();
             await loadUserBookings();
             
-            // Show temporary notification
             showTemporaryNotification('🎉 Registration successful! Welcome, ' + currentUser.name, 'success');
         } else {
             throw new Error(result.message || 'Registration failed');
@@ -847,26 +783,17 @@ async function handleRegister(e) {
     } catch (error) {
         console.error('❌ Registration error:', error);
         showNotification(error.message || 'Registration failed. Please try again.', 'error');
-        
-        // Remove loading state
-        const registerModal = document.getElementById('registerModal');
-        if (registerModal) {
-            registerModal.querySelector('.loading')?.remove();
-        }
     }
 }
 
 // Handle login
 async function handleLogin(e) {
     e.preventDefault();
-    console.log('🔐 Login form submitted');
     
     const credentials = {
         email: document.getElementById('loginEmail').value,
         password: document.getElementById('loginPassword').value
     };
-
-    console.log('👤 Login attempt:', credentials.email);
 
     if (!credentials.email || !credentials.password) {
         showNotification('Please enter email and password', 'error');
@@ -882,21 +809,18 @@ async function handleLogin(e) {
         });
 
         const result = await response.json();
-        console.log('📊 Login response:', result);
 
         if (result.success) {
             localStorage.setItem('token', result.token);
             localStorage.setItem('user', JSON.stringify(result.user));
             currentUser = result.user;
             
-            // Initialize session management after login
             initializeSessionManagement();
             
-            closeModal('loginModal');
+            closeAllModals();
             updateUI();
             await loadUserBookings();
             
-            // Show temporary notification
             if (currentUser.role === 'admin') {
                 showTemporaryNotification(`🎉 Welcome Admin ${currentUser.name}!`, 'success');
             } else {
@@ -908,19 +832,12 @@ async function handleLogin(e) {
     } catch (error) {
         console.error('❌ Login error:', error);
         showNotification(error.message || 'Login failed. Please check credentials.', 'error');
-        
-        // Remove loading state
-        const loginModal = document.getElementById('loginModal');
-        if (loginModal) {
-            loginModal.querySelector('.loading')?.remove();
-        }
     }
 }
 
 // Handle booking
 async function handleBooking(e) {
     e.preventDefault();
-    console.log('📅 Booking form submitted');
     
     if (!selectedCar || !currentUser) {
         showNotification('Please select a car and ensure you are logged in', 'error');
@@ -943,8 +860,6 @@ async function handleBooking(e) {
         }
     };
 
-    console.log('🚗 Booking data:', bookingData);
-
     try {
         showLoading('bookingModal', 'Processing your booking...');
         
@@ -954,12 +869,17 @@ async function handleBooking(e) {
         });
 
         const result = await response.json();
-        console.log('📊 Booking response:', result);
 
         if (result.success) {
             showNotification('🎉 Booking confirmed for ' + selectedCar.make + ' ' + selectedCar.model, 'success');
-            closeModal('bookingModal');
+            closeAllModals();
+            
             await loadUserBookings();
+            
+            setTimeout(() => {
+                document.getElementById('bookings').scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+            
         } else {
             throw new Error(result.message || 'Booking failed');
         }
@@ -978,13 +898,13 @@ async function loadUserBookings() {
 
     try {
         const response = await mobileFetch(`${API_BASE}/bookings/my-bookings`);
-        
         const result = await response.json();
         
         if (result.success) {
             bookings = result.bookings || [];
-            console.log('✅ Loaded bookings:', bookings.length);
             displayBookings();
+        } else {
+            throw new Error(result.message || 'Failed to load bookings');
         }
     } catch (error) {
         console.error('Error loading bookings:', error);
@@ -996,12 +916,14 @@ async function loadUserBookings() {
 // Display bookings
 function displayBookings() {
     const container = document.getElementById('bookingsContainer');
+    if (!container) return;
     
     if (!currentUser) {
         container.innerHTML = `
             <div class="no-bookings">
                 <i class="fas fa-key"></i>
                 <h3>Please login to view your bookings</h3>
+                <p>Login to see your booking history and manage your rentals</p>
                 <button class="btn btn-primary" onclick="showLogin()">Login Now</button>
             </div>
         `;
@@ -1020,11 +942,12 @@ function displayBookings() {
         return;
     }
 
-    container.innerHTML = bookings.map(booking => `
-        <div class="booking-card">
+    container.innerHTML = bookings.map(booking => {
+        return `
+        <div class="booking-card" data-booking-id="${booking._id}">
             <div class="booking-header">
                 <h3>${booking.car?.make || 'Car'} ${booking.car?.model || ''}</h3>
-                <span class="booking-status ${booking.status}">${booking.status}</span>
+                <span class="booking-status ${booking.status}">${booking.status.toUpperCase()}</span>
             </div>
             <div class="booking-details">
                 <p><i class="fas fa-calendar"></i> <strong>Dates:</strong> 
@@ -1051,19 +974,13 @@ function displayBookings() {
                         `<button class="btn btn-success btn-small" onclick="markBookingAsCompleted('${booking._id}')">
                             <i class="fas fa-check"></i> Mark Complete
                         </button>` : ''}
-                    
-                    ${booking.status === 'completed' ? 
-                        `<span class="status-completed"><i class="fas fa-check-circle"></i> Completed</span>` : ''}
-                    
-                    ${booking.status === 'cancelled' ? 
-                        `<span class="status-cancelled"><i class="fas fa-times-circle"></i> Cancelled</span>` : ''}
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
-// Update UI based on auth status
+// Update UI based on auth status - FIXED ADMIN DASHBOARD
 function updateUI() {
     const loginBtn = document.getElementById('loginBtn');
     const registerBtn = document.getElementById('registerBtn');
@@ -1072,6 +989,7 @@ function updateUI() {
     const mobileAuthButtons = document.querySelector('.mobile-auth-buttons');
     
     console.log('🔄 Updating UI, currentUser:', currentUser);
+    console.log('👑 User role:', currentUser?.role);
     
     // Remove existing user display
     const existingUserDisplay = document.querySelector('.user-display');
@@ -1085,21 +1003,28 @@ function updateUI() {
         existingAdminLink.remove();
     }
 
+    // Remove existing mobile admin link if any
+    const existingMobileAdminLink = document.querySelector('.mobile-admin-link');
+    if (existingMobileAdminLink) {
+        existingMobileAdminLink.remove();
+    }
+
     if (currentUser) {
         // User is logged in
-        console.log('👤 User logged in:', currentUser.name);
+        console.log('👤 User logged in:', currentUser.name, 'Role:', currentUser.role);
         
-        // Create user display element for desktop
-        const userDisplay = document.createElement('div');
-        userDisplay.className = 'user-display';
-        userDisplay.innerHTML = `
-            <span style="color: var(--green); font-weight: 600; margin-right: 1rem;">
-                <i class="fas fa-user"></i> Welcome, ${currentUser.name}
-            </span>
-            <button class="btn btn-secondary btn-small" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
-        `;
+       // In the updateUI function, update the user display creation:
+const userDisplay = document.createElement('div');
+userDisplay.className = 'user-display';
+userDisplay.innerHTML = `
+    <span title="${currentUser.name}${currentUser.role === 'admin' ? ' (Admin)' : ''}">
+        <i class="fas fa-user"></i> ${currentUser.name}
+        ${currentUser.role === 'admin' ? ' 👑' : ''}
+    </span>
+    <button class="btn btn-secondary btn-small" onclick="logout()" style="flex-shrink: 0;">
+        <i class="fas fa-sign-out-alt"></i> Logout
+    </button>
+`;
         
         // Replace desktop auth buttons with user display
         if (authButtons) {
@@ -1112,6 +1037,7 @@ function updateUI() {
             mobileAuthButtons.innerHTML = `
                 <div style="text-align: center; color: var(--green); margin-bottom: 1rem;">
                     <i class="fas fa-user"></i> Welcome, ${currentUser.name}
+                    ${currentUser.role === 'admin' ? ' 👑' : ''}
                 </div>
                 <button class="btn btn-secondary btn-full" onclick="logout(); closeMobileMenu();">
                     <i class="fas fa-sign-out-alt"></i> Logout
@@ -1123,7 +1049,7 @@ function updateUI() {
         if (currentUser.role === 'admin' && navLinks) {
             console.log('👑 Admin user detected, adding dashboard link to nav');
             
-            // Create admin dashboard link
+            // Create admin dashboard link for desktop
             const adminLink = document.createElement('a');
             adminLink.href = "admin.html";
             adminLink.className = "admin-nav-link";
@@ -1131,13 +1057,21 @@ function updateUI() {
                 <i class="fas fa-user-shield"></i> Admin Dashboard
             `;
             adminLink.style.cssText = `
-                background: linear-gradient(45deg, #f59e0b, #fbbf24);
-                color: white !important;
-                padding: 0.5rem 1rem !important;
-                border-radius: 5px;
-                font-weight: 600;
-                transition: all 0.3s ease;
-            `;
+    background: linear-gradient(45deg, #f59e0b, #fbbf24);
+    color: white !important;
+    padding: 0.4rem 0.8rem !important;
+    border-radius: 5px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-right: 0.5rem;
+    text-decoration: none;
+    display: inline-block;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    border: none;
+    cursor: pointer;
+`;
             
             // Add hover effects
             adminLink.addEventListener('mouseenter', function() {
@@ -1152,19 +1086,42 @@ function updateUI() {
                 this.style.boxShadow = 'none';
             });
             
-            // Find the "My Bookings" link and replace it with Admin Dashboard
-            const bookingsLink = Array.from(navLinks.children).find(child => 
-                child.textContent.includes('My Bookings')
-            );
-            
-            if (bookingsLink) {
-                bookingsLink.replaceWith(adminLink);
-                console.log('✅ Replaced "My Bookings" with "Admin Dashboard" for admin');
-            } else {
-                // If "My Bookings" not found, insert before auth buttons
+            // Insert admin link before auth buttons
+            if (authButtons && authButtons.parentNode) {
                 navLinks.insertBefore(adminLink, authButtons);
-                console.log('✅ Added "Admin Dashboard" to navigation');
+                console.log('✅ Added "Admin Dashboard" to desktop navigation');
             }
+            
+            // Also add to mobile navigation
+            const mobileNavLinks = document.getElementById('mobileNavLinks');
+            if (mobileNavLinks) {
+                const mobileAdminLink = document.createElement('a');
+                mobileAdminLink.href = "admin.html";
+                mobileAdminLink.className = "mobile-admin-link";
+                mobileAdminLink.innerHTML = `
+                    <i class="fas fa-user-shield"></i> Admin Dashboard
+                `;
+                mobileAdminLink.style.cssText = `
+                    background: linear-gradient(45deg, #f59e0b, #fbbf24);
+                    color: white !important;
+                    padding: 1rem !important;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    text-align: center;
+                    margin: 0.5rem 1rem;
+                    text-decoration: none;
+                    display: block;
+                    transition: all 0.3s ease;
+                `;
+                
+                mobileAdminLink.addEventListener('click', closeMobileMenu);
+                
+                // Insert at the top of mobile nav
+                mobileNavLinks.insertBefore(mobileAdminLink, mobileNavLinks.firstChild);
+                console.log('✅ Added "Admin Dashboard" to mobile navigation');
+            }
+        } else {
+            console.log('👤 Regular user, no admin dashboard');
         }
         
     } else {
@@ -1189,36 +1146,6 @@ function updateUI() {
                     <i class="fas fa-user-plus"></i> Register
                 </button>
             `;
-        }
-        
-        // Ensure "My Bookings" link exists for non-admin users
-        if (navLinks) {
-            const existingBookingsLink = document.querySelector('a[href="#bookings"]');
-            if (!existingBookingsLink) {
-                const bookingsLink = document.createElement('a');
-                bookingsLink.href = "#bookings";
-                bookingsLink.textContent = "My Bookings";
-                bookingsLink.style.cssText = `
-                    color: var(--lightest-slate);
-                    text-decoration: none;
-                    font-weight: 500;
-                    transition: all 0.3s ease;
-                    padding: 0.5rem 0;
-                    position: relative;
-                `;
-                
-                // Add hover effect
-                bookingsLink.addEventListener('mouseenter', function() {
-                    this.style.color = 'var(--green)';
-                });
-                
-                bookingsLink.addEventListener('mouseleave', function() {
-                    this.style.color = 'var(--lightest-slate)';
-                });
-                
-                // Insert before auth buttons
-                navLinks.insertBefore(bookingsLink, authButtons);
-            }
         }
         
         // Re-attach event listeners to new buttons
@@ -1246,18 +1173,13 @@ function updateUI() {
 function checkAuthStatus() {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
-    // Check if session is still valid
     const activeSession = sessionStorage.getItem('naiduCarRentalsActiveSession');
     
     if (token && userData && activeSession) {
         try {
             currentUser = JSON.parse(userData);
             console.log('🔑 User session found:', currentUser.name);
-            
-            // Initialize session management
             initializeSessionManagement();
-            
             updateUI();
             loadUserBookings();
         } catch (error) {
@@ -1265,7 +1187,6 @@ function checkAuthStatus() {
             logout();
         }
     } else if (token && userData && !activeSession) {
-        // Session expired - auto logout
         console.log('⏰ Session expired - auto logging out');
         logout();
     } else {
@@ -1276,18 +1197,13 @@ function checkAuthStatus() {
 
 // Logout function
 function logout() {
-    console.log('👋 Logging out user:', currentUser?.name);
-    
-    // Show logout notification before clearing data
     const userName = currentUser?.name || 'User';
     showTemporaryNotification(`👋 Goodbye, ${userName}!`, 'info');
     
-    // Clear all storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('naiduCarRentalsActiveSession');
     
-    // Reset state
     currentUser = null;
     bookings = [];
     
@@ -1314,7 +1230,6 @@ function showLoading(containerId, message) {
 
 // Show notification
 function showNotification(message, type = 'info') {
-    // Remove existing notifications
     const existingNotifications = document.querySelectorAll('.notification');
     existingNotifications.forEach(notif => notif.remove());
     
@@ -1349,7 +1264,6 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-    // Auto remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.remove();
@@ -1357,131 +1271,23 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Show error state
-function showError(containerId, message) {
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.innerHTML = `
-            <div class="error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Unable to Load Cars</h3>
-                <p>${message}</p>
-                <div style="margin-top: 1rem;">
-                    <button class="btn btn-primary" onclick="loadCars()">
-                        <i class="fas fa-refresh"></i> Try Again
-                    </button>
-                    <button class="btn btn-secondary" onclick="loadSampleCars()">
-                        <i class="fas fa-car"></i> Use Sample Cars
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-}
-
 // Scroll to cars section
 function scrollToCars() {
     document.getElementById('cars').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Session management for automatic logout on tab close
+// Session management
 function initializeSessionManagement() {
-    console.log('🔐 Initializing session management...');
-    
-    // Set session flag when user logs in
     if (currentUser) {
         sessionStorage.setItem('naiduCarRentalsActiveSession', 'true');
-        console.log('✅ Session tracking enabled');
-    }
-    
-    // Check session on page load
-    window.addEventListener('load', function() {
-        const activeSession = sessionStorage.getItem('naiduCarRentalsActiveSession');
-        if (!activeSession && (localStorage.getItem('token') || localStorage.getItem('user'))) {
-            console.log('🚫 Session expired - auto logging out');
-            logout();
-        }
-    });
-    
-    // Detect tab/browser close
-    window.addEventListener('beforeunload', function(e) {
-        if (currentUser) {
-            console.log('👋 Tab closing - preparing for auto logout');
-            // Don't clear localStorage here, let the unload event handle it
-        }
-    });
-    
-    // Handle page unload (tab close, refresh, navigation)
-    window.addEventListener('unload', function() {
-        if (currentUser) {
-            console.log('🚪 User leaving - auto logout triggered');
-            // We can't make API calls here, but we can clear local storage
-            // The actual logout will happen on next page load via sessionStorage check
-        }
-    });
-}
-
-// User marks booking as completed
-async function markBookingAsCompleted(bookingId) {
-    if (!confirm('Are you sure you want to mark this booking as completed?')) {
-        return;
-    }
-
-    try {
-        showLoading('bookingsContainer', 'Marking booking as completed...');
-        
-        const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/complete`, {
-            method: 'PUT'
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('✅ Booking marked as completed successfully!', 'success');
-            await loadUserBookings();
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error) {
-        console.error('Error completing booking:', error);
-        showNotification('Error: ' + error.message, 'error');
     }
 }
 
-// User cancels booking
-async function cancelBooking(bookingId) {
-    if (!confirm('Are you sure you want to cancel this booking?')) {
-        return;
-    }
-
-    try {
-        showLoading('bookingsContainer', 'Cancelling booking...');
-        
-        const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
-            method: 'PUT'
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('✅ Booking cancelled successfully!', 'success');
-            await loadUserBookings();
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error) {
-        console.error('Error cancelling booking:', error);
-        showNotification('Error: ' + error.message, 'error');
-    }
-}
-
-// Show temporary notification message
+// Show temporary notification
 function showTemporaryNotification(message, type = 'info') {
-    // Remove existing temporary notifications
     const existingNotifications = document.querySelectorAll('.temporary-notification');
     existingNotifications.forEach(notif => notif.remove());
     
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `temporary-notification ${type}`;
     notification.style.cssText = `
@@ -1501,14 +1307,12 @@ function showTemporaryNotification(message, type = 'info') {
         word-wrap: break-word;
     `;
     
-    // Set border color based on type
     const borderColor = type === 'success' ? '#10b981' : 
                        type === 'error' ? '#ef4444' : 
                        type === 'warning' ? '#f59e0b' : '#3b82f6';
     
     notification.style.borderLeftColor = borderColor;
     
-    // Add icon based on type
     const icon = type === 'success' ? '✅' : 
                 type === 'error' ? '❌' : 
                 type === 'warning' ? '⚠️' : 'ℹ️';
@@ -1522,7 +1326,6 @@ function showTemporaryNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-    // Auto remove after 3 seconds
     setTimeout(() => {
         if (notification.parentElement) {
             notification.remove();
@@ -1530,7 +1333,7 @@ function showTemporaryNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Add this CSS animation to your style.css
+// Add notification styles
 function addNotificationStyles() {
     if (!document.getElementById('notification-styles')) {
         const style = document.createElement('style');
@@ -1561,49 +1364,63 @@ function addNotificationStyles() {
             .temporary-notification {
                 font-family: 'Poppins', sans-serif;
             }
-            
-            /* Mobile touch improvements */
-            @media (max-width: 768px) {
-                .book-btn, .btn {
-                    min-height: 44px;
-                    min-width: 44px;
-                }
-                
-                .car-card {
-                    margin: 10px 5px;
-                }
-                
-                .modal-content {
-                    margin: 5% auto;
-                    width: 95%;
-                }
-            }
         `;
         document.head.appendChild(style);
     }
 }
 
-// Test API connection
-async function testAPIConnection() {
+// Cancel booking
+async function cancelBooking(bookingId) {
+    if (!confirm('Are you sure you want to cancel this booking?')) {
+        return;
+    }
+
     try {
-        console.log('🔗 Testing API connection...');
-        const response = await mobileFetch(`${API_BASE}/health`);
+        showLoading('bookingsContainer', 'Cancelling booking...');
+        
+        const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
+            method: 'PUT'
+        });
+
         const result = await response.json();
-        console.log('✅ API Connection Test:', result);
-        return true;
+        
+        if (result.success) {
+            showNotification('✅ Booking cancelled successfully!', 'success');
+            await loadUserBookings();
+        } else {
+            throw new Error(result.message);
+        }
     } catch (error) {
-        console.error('❌ API Connection Test Failed:', error);
-        return false;
+        console.error('Error cancelling booking:', error);
+        showNotification('Error: ' + error.message, 'error');
     }
 }
 
-// Initialize API test on load
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        testAPIConnection();
-        checkMobileNetwork();
-    }, 1000);
-});
+// Mark booking as completed
+async function markBookingAsCompleted(bookingId) {
+    if (!confirm('Are you sure you want to mark this booking as completed?')) {
+        return;
+    }
+
+    try {
+        showLoading('bookingsContainer', 'Marking booking as completed...');
+        
+        const response = await mobileFetch(`${API_BASE}/bookings/${bookingId}/complete`, {
+            method: 'PUT'
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Booking marked as completed successfully!', 'success');
+            await loadUserBookings();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error completing booking:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
 
 console.log('✅ Naidu Car Rentals Frontend loaded successfully!');
-console.log('📱 Mobile Compatibility: Enabled');

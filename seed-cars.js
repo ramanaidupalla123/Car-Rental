@@ -13,7 +13,7 @@ const seedCars = async () => {
     console.log('🗑️ Cleared existing cars');
 
     const cars = [
-      // Maruti Suzuki Cars - GUARANTEED WORKING IMAGES
+      // Maruti Suzuki Cars
       {
         make: 'Maruti Suzuki',
         model: 'Swift',
@@ -75,7 +75,7 @@ const seedCars = async () => {
         registrationNumber: 'TS09EF9012'
       },
 
-      // Hyundai Cars - GUARANTEED WORKING IMAGES
+      // Hyundai Cars
       {
         make: 'Hyundai',
         model: 'Creta',
@@ -117,7 +117,7 @@ const seedCars = async () => {
         registrationNumber: 'TS09IJ7890'
       },
 
-      // Toyota Cars - GUARANTEED WORKING IMAGES
+      // Toyota Cars - FIXED: Both Toyota cars included
       {
         make: 'Toyota',
         model: 'Innova Crysta',
@@ -138,29 +138,28 @@ const seedCars = async () => {
         mileage: '13 kmpl',
         registrationNumber: 'TS09KL1357'
       },
-      // In seed-cars.js - Find the Toyota Fortuner section and update:
-{
-  make: 'Toyota',
-  model: 'Fortuner',
-  year: 2024,
-  type: 'SUV',
-  pricePerDay: 3500,
-  pricePerHour: 400,
-  fuelType: 'Diesel',
-  transmission: 'Automatic',
-  seats: 7,
-  features: ['AC', 'Leather Seats', 'Sunroof', 'GPS', '4x4', '360 Camera'],
-  images: [{ 
-    url: 'https://imgd.aeplcdn.com/664x374/n/cw/ec/44709/fortuner-exterior-left-front-three-quarter.jpeg?q=80', 
-    alt: 'Toyota Fortuner 2024' 
-  }],
-  available: true,
-  color: 'White',
-  mileage: '10 kmpl',
-  registrationNumber: 'TS09MN2468'
-},
+      {
+        make: 'Toyota',
+        model: 'Fortuner',
+        year: 2024,
+        type: 'SUV',
+        pricePerDay: 3500,
+        pricePerHour: 400,
+        fuelType: 'Diesel',
+        transmission: 'Automatic',
+        seats: 7,
+        features: ['AC', 'Leather Seats', 'Sunroof', 'GPS', '4x4', '360 Camera'],
+        images: [{ 
+          url: 'https://imgd.aeplcdn.com/664x374/n/cw/ec/44709/fortuner-exterior-left-front-three-quarter.jpeg?q=80', 
+          alt: 'Toyota Fortuner 2024' 
+        }],
+        available: true,
+        color: 'White',
+        mileage: '10 kmpl',
+        registrationNumber: 'TS09MN2468'
+      },
 
-      // Mahindra Cars - GUARANTEED WORKING IMAGES
+      // Mahindra Cars
       {
         make: 'Mahindra',
         model: 'Thar',
@@ -205,13 +204,16 @@ const seedCars = async () => {
 
     // Insert cars
     await Car.insertMany(cars);
-    console.log(`✅ Added ${cars.length} cars to database with guaranteed working images`);
+    console.log(`✅ Added ${cars.length} cars to database`);
 
-    // Display added cars with image info
-    console.log('\n🚗 Added Cars with Real Images:');
-    cars.forEach(car => {
-      console.log(`   - ${car.make} ${car.model}`);
-      console.log(`     Image: ${car.images[0].url}`);
+    // Verify all cars were added
+    const count = await Car.countDocuments();
+    console.log(`📊 Total cars in database: ${count}`);
+
+    // Display added cars
+    console.log('\n🚗 Added Cars:');
+    cars.forEach((car, index) => {
+      console.log(`   ${index + 1}. ${car.make} ${car.model} - ${car.type}`);
     });
 
   } catch (error) {

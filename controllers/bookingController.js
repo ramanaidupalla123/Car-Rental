@@ -88,10 +88,16 @@ exports.createBooking = async (req, res) => {
     // Populate booking details for response
     await booking.populate('car', 'make model year type pricePerDay pricePerHour images');
     
+    // Get updated bookings list for the user
+    const userBookings = await Booking.find({ user: req.user.id })
+      .populate('car', 'make model year type pricePerDay pricePerHour images')
+      .sort({ createdAt: -1 });
+
     res.status(201).json({
       success: true,
       message: 'Booking created successfully. Waiting for admin approval.',
-      booking
+      booking,
+      bookings: userBookings // Send updated bookings list
     });
 
   } catch (error) {
@@ -161,10 +167,16 @@ exports.markAsCompleted = async (req, res) => {
     // Make the car available again
     await Car.findByIdAndUpdate(booking.car, { available: true });
 
+    // Get updated bookings list
+    const userBookings = await Booking.find({ user: req.user.id })
+      .populate('car', 'make model year type pricePerDay pricePerHour images')
+      .sort({ createdAt: -1 });
+
     res.json({
       success: true,
       message: 'Booking marked as completed successfully',
-      booking
+      booking,
+      bookings: userBookings // Send updated bookings list
     });
 
   } catch (error) {
@@ -211,10 +223,16 @@ exports.cancelBooking = async (req, res) => {
     // Make the car available again
     await Car.findByIdAndUpdate(booking.car, { available: true });
 
+    // Get updated bookings list
+    const userBookings = await Booking.find({ user: req.user.id })
+      .populate('car', 'make model year type pricePerDay pricePerHour images')
+      .sort({ createdAt: -1 });
+
     res.json({
       success: true,
       message: 'Booking cancelled successfully',
-      booking
+      booking,
+      bookings: userBookings // Send updated bookings list
     });
 
   } catch (error) {

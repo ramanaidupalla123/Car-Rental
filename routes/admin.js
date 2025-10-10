@@ -239,6 +239,8 @@ router.get('/users', auth, admin, async (req, res) => {
   }
 });
 
+// CAR MANAGEMENT ROUTES
+
 // Get all cars (Admin only - with full details)
 router.get('/cars', auth, admin, async (req, res) => {
   try {
@@ -280,6 +282,41 @@ router.get('/cars', auth, admin, async (req, res) => {
   }
 });
 
+// Add new car (Admin only)
+router.post('/cars', auth, admin, async (req, res) => {
+  try {
+    console.log('➕ Admin: Adding new car...');
+    
+    const carData = req.body;
+
+    // Validate required fields
+    if (!carData.make || !carData.model || !carData.type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Make, model, and type are required'
+      });
+    }
+
+    // Create car
+    const car = await Car.create(carData);
+
+    console.log(`✅ Admin: Car added successfully - ${car.make} ${car.model}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Car added successfully',
+      car
+    });
+  } catch (error) {
+    console.error('❌ Admin add car error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding car',
+      error: error.message
+    });
+  }
+});
+
 // Update car availability
 router.put('/cars/:id/availability', auth, admin, async (req, res) => {
   try {
@@ -311,6 +348,51 @@ router.put('/cars/:id/availability', auth, admin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating car availability',
+      error: error.message
+    });
+  }
+});
+
+// Delete car (Admin only)
+router.delete('/cars/:id', auth, admin, async (req, res) => {
+  try {
+    console.log(`🗑️ Admin: Deleting car ${req.params.id}...`);
+    
+    const car = await Car.findById(req.params.id);
+
+    if (!car) {
+      return res.status(404).json({
+        success: false,
+        message: 'Car not found'
+      });
+    }
+
+    // Check if car has active bookings
+    const activeBookings = await Booking.findOne({
+      car: req.params.id,
+      status: { $in: ['confirmed', 'active'] }
+    });
+
+    if (activeBookings) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete car with active bookings'
+      });
+    }
+
+    await Car.findByIdAndDelete(req.params.id);
+
+    console.log('✅ Admin: Car deleted successfully');
+
+    res.json({
+      success: true,
+      message: 'Car deleted successfully'
+    });
+  } catch (error) {
+    console.error('❌ Admin delete car error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting car',
       error: error.message
     });
   }

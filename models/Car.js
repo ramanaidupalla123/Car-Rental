@@ -69,7 +69,7 @@ const carSchema = new mongoose.Schema({
   color: { type: String, default: 'White' },
   mileage: { type: String, default: '15 kmpl' },
   location: {
-    address: { type: String, default: 'Naidu Car Rentals Main Branch' },
+    address: { type: String, default: 'Car Rentals Main Branch' },
     city: { type: String, default: 'Hyderabad' },
     coordinates: {
       lat: Number,
