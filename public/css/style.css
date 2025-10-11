@@ -2015,3 +2015,366 @@ html, body {
         display: none;
     }
 }
+
+
+/* Edit Car Button */
+.btn-edit-car {
+    background: #dab576;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s ease;
+    flex: 1;
+}
+
+.btn-edit-car:hover {
+    background: #d97706;
+}
+
+/* Car Actions Layout */
+.car-actions-admin {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.car-actions-admin button {
+    flex: 1;
+    min-width: 80px;
+}
+
+/* Modal Styles */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.form-section h4 {
+    margin: 0 0 1rem 0;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Form Grid Layouts */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-grid-2,
+    .form-grid-3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .car-actions-admin {
+        flex-direction: column;
+    }
+    
+    .car-actions-admin button {
+        min-width: auto;
+    }
+}
+
+
+/* ===== BOOKING FORM TEXT COLOR UPDATES ===== */
+
+/* Black text for labels in white background sections */
+.booking-form .form-section {
+    background: white !important;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.booking-form .form-section h4 {
+    color: #000000 !important; /* Black for headings */
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.booking-form .form-group label {
+    color: #000000 !important; /* Black for labels */
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Black text for input fields with white background */
+.booking-form input[type="text"],
+.booking-form input[type="email"],
+.booking-form input[type="tel"],
+.booking-form select {
+    color: #000000 !important; /* Black text in inputs */
+    background-color: white !important;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    padding: 0.8rem;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+/* Specific styling for the form fields you mentioned */
+#customerName,
+#customerEmail,
+#customerPhone,
+#customerAddress,
+#rentalType,
+#duration {
+    color: #000000 !important; /* Black text */
+    background-color: white !important; /* White background */
+}
+
+/* Date inputs with black background but white calendar */
+.booking-form input[type="date"] {
+    color: #ffffff !important; /* White text for dates */
+    background-color: #000000 !important; /* Black background */
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    padding: 0.8rem;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+/* White calendar symbols for date inputs */
+.booking-form .form-group:has(input[type="date"]) {
+    position: relative;
+}
+
+.booking-form .form-group:has(input[type="date"])::after {
+    content: '📅';
+    position: absolute;
+    right: 12px;
+    top: 65%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    color: white !important; /* White calendar */
+    border-radius: 4px;
+    padding: 2px 4px;
+    pointer-events: none;
+    z-index: 2;
+    background: transparent !important; /* No background */
+}
+
+/* Specific date fields */
+#startDate,
+#endDate {
+    color: #ffffff !important; /* White text */
+    background-color: #000000 !important; /* Black background */
+}
+
+/* Ensure the calendar icon appears properly on black background */
+.booking-form input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* Makes the native calendar icon white */
+    cursor: pointer;
+}
+
+/* For Firefox */
+.booking-form input[type="date"] {
+    color-scheme: dark;
+}
+
+/* Price summary with black text */
+.price-summary .price-item,
+.price-summary .price-total {
+    color: #000000 !important; /* Black text */
+    font-weight: 500;
+}
+
+.price-summary .total-amount {
+    color: #059669 !important; /* Green for total amount */
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+/* Selected car info with black text */
+.selected-car-info {
+    color: #000000 !important; /* Black text */
+    background: white !important;
+    padding: 1rem;
+    border-radius: 5px;
+    border: 1px solid #e2e8f0;
+}
+
+.selected-car-info strong {
+    color: #000000 !important; /* Black text */
+    font-weight: 600;
+}
+
+/* Form section icons */
+.form-section h4 i {
+    color: #3b82f6 !important; /* Blue for icons */
+}
+
+/* Focus states for better usability */
+.booking-form .form-group:focus-within label {
+    color: #3b82f6 !important; /* Blue when focused */
+}
+
+.booking-form input:focus,
+.booking-form select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Read-only input styling */
+.booking-form input[readonly] {
+    background-color: #f9fafb !important;
+    color: #6b7280 !important;
+}
+
+/* Placeholder text color */
+.booking-form input::placeholder {
+    color: #9ca3af !important;
+}
+
+
+/* ===== PRICING SECTION STYLING ===== */
+
+/* Pricing section with white background and black heading */
+.booking-form .form-section:nth-child(4) {
+    background: #ffffff !important; /* White background for entire section */
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+/* Pricing heading - Black text for visibility */
+.booking-form .form-section:nth-child(4) h4 {
+    color: #000000 !important; /* Black for "Pricing" heading */
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.booking-form .form-section:nth-child(4) h4 i {
+    color: #3b82f6 !important; /* Blue for rupee icon */
+}
+
+/* Inner pricing div - Navy blue with white text */
+.price-summary {
+    background: var(--navy-blue) !important; /* Navy blue background */
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--lightest-navy);
+    margin-top: 1rem;
+}
+
+/* All text inside pricing div - White */
+.price-summary .price-item,
+.price-summary .price-total {
+    color: #ffffff !important; /* White text */
+    font-weight: 500;
+}
+
+.price-summary .price-item span:first-child {
+    color: #e6f1ff !important; /* Light white for labels */
+}
+
+.price-summary .price-item span:last-child {
+    color: #ffffff !important; /* Pure white for values */
+}
+
+.price-summary .price-total {
+    color: #ffffff !important; /* White text for total */
+    border-top: 1px solid var(--lightest-navy);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.price-summary .total-amount {
+    color: var(--green) !important; /* Green for total amount */
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+/* Dynamic pricing values - White */
+#rateDisplay,
+#durationDisplay,
+#totalAmount {
+    color: #ffffff !important; /* White for dynamic pricing values */
+}
+
+
+/* Customer Details Modal Dark Text */
+#customerDetailsModal .modal-content {
+    background: white !important;
+    color: #000000 !important;
+}
+
+#customerDetailsModal .modal-header {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+#customerDetailsModal .modal-header h3 {
+    color: #000000 !important;
+}
+
+#customerDetailsModal .close {
+    color: #000000 !important;
+}
+
+#customerDetailsModal .modal-body {
+    color: #000000 !important;
+}
+
+#customerDetailsModal .customer-info,
+#customerDetailsModal .customer-name,
+#customerDetailsModal .customer-detail {
+    color: #000000 !important;
+}
+
+#customerDetailsModal table {
+    color: #000000 !important;
+}
+
+#customerDetailsModal table th {
+    color: #000000 !important;
+    background: #f8fafc !important;
+}
+
+#customerDetailsModal table td {
+    color: #000000 !important;
+    border-color: #e2e8f0 !important;
+}

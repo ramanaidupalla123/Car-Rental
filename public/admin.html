@@ -538,6 +538,49 @@
             color: #cbd5e1;
         }
 
+        /* Customer Details Modal Dark Text */
+        #customerDetailsModal .modal-content {
+            background: white !important;
+            color: #000000 !important;
+        }
+
+        #customerDetailsModal .modal-header {
+            background: #f8fafc !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        #customerDetailsModal .modal-header h3 {
+            color: #000000 !important;
+        }
+
+        #customerDetailsModal .close {
+            color: #000000 !important;
+        }
+
+        #customerDetailsModal .modal-body {
+            color: #000000 !important;
+        }
+
+        #customerDetailsModal .customer-info,
+        #customerDetailsModal .customer-name,
+        #customerDetailsModal .customer-detail {
+            color: #000000 !important;
+        }
+
+        #customerDetailsModal table {
+            color: #000000 !important;
+        }
+
+        #customerDetailsModal table th {
+            color: #000000 !important;
+            background: #f8fafc !important;
+        }
+
+        #customerDetailsModal table td {
+            color: #000000 !important;
+            border-color: #e2e8f0 !important;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .admin-container {
@@ -596,6 +639,771 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Enhanced Reports Styles */
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.report-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 4px solid;
+}
+
+.report-card.revenue { border-left-color: #10b981; }
+.report-card.bookings { border-left-color: #3b82f6; }
+.report-card.customers { border-left-color: #f59e0b; }
+.report-card.cancellations { border-left-color: #ef4444; }
+
+.report-card h4 {
+    margin: 0 0 1rem 0;
+    color: #1e293b;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.report-value.revenue { color: #10b981; }
+.report-value.bookings { color: #3b82f6; }
+.report-value.customers { color: #f59e0b; }
+.report-value.cancellations { color: #ef4444; }
+
+.report-change {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.report-change.positive { color: #10b981; }
+.report-change.negative { color: #ef4444; }
+
+.chart-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+}
+
+.chart-container h4 {
+    margin: 0 0 1rem 0;
+    color: #1e293b;
+}
+
+/* Enhanced Reports Styles */
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.report-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-left: 4px solid #3b82f6;
+}
+
+.report-card.revenue { border-left-color: #10b981; }
+.report-card.bookings { border-left-color: #3b82f6; }
+.report-card.customers { border-left-color: #f59e0b; }
+.report-card.cancellations { border-left-color: #ef4444; }
+
+.report-card h4 {
+    margin: 0 0 1rem 0;
+    color: #374151;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.report-value.revenue { color: #10b981; }
+.report-value.bookings { color: #3b82f6; }
+.report-value.customers { color: #f59e0b; }
+.report-value.cancellations { color: #ef4444; }
+
+.report-change {
+    font-size: 0.85rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+.chart-container h4 {
+    margin: 0 0 1.5rem 0;
+    color: #1f2937;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .report-value {
+        font-size: 1.75rem;
+    }
+}
+
+/* Filter Status Display Styles */
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-status-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.active-filter {
+    background: #3b82f6;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.active-filter::before {
+    content: '✓';
+    font-weight: bold;
+}
+
+.no-filter {
+    color: #64748b;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Enhanced Filter Styles */
+.filters {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 140px;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Status-specific colors for filter display */
+.status-filter[data-status="pending"] { background: #f59e0b; }
+.status-filter[data-status="confirmed"] { background: #3b82f6; }
+.status-filter[data-status="active"] { background: #8b5cf6; }
+.status-filter[data-status="completed"] { background: #10b981; }
+.status-filter[data-status="cancelled"] { background: #ef4444; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .filters {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        flex: 1;
+        min-width: auto;
+    }
+}
+/* If you want to be more specific for the clear button */
+.filters .btn.btn-secondary {
+    background: #f8fafc;
+    color: #000000;
+    border: 1px solid #cbd5e1;
+}
+
+.filters .btn.btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #000000;
+}
+
+
+/* Enhanced Booking Details Modal Styles */
+#bookingDetailsModal .modal-content {
+    max-width: 900px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+#bookingDetailsContent {
+    color: #1f2937; /* Dark gray for better readability */
+    font-size: 0.95rem;
+}
+
+#bookingDetailsContent h4 {
+    color: #111827; /* Very dark gray for headings */
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#bookingDetailsContent .form-section {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+}
+
+#bookingDetailsContent .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+#bookingDetailsContent .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#bookingDetailsContent .info-item:last-child {
+    border-bottom: none;
+}
+
+#bookingDetailsContent .info-label {
+    font-weight: 600;
+    color: #374151; /* Dark gray for labels */
+    min-width: 120px;
+}
+
+#bookingDetailsContent .info-value {
+    color: #111827; /* Very dark gray for values */
+    font-weight: 500;
+    text-align: right;
+    flex: 1;
+}
+
+#bookingDetailsContent .status-badge {
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+#bookingDetailsContent .customer-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 1rem;
+}
+
+#bookingDetailsContent .customer-detail {
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+#bookingDetailsContent .price-highlight {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #059669; /* Green for price */
+}
+
+#bookingDetailsContent .date-info {
+    color: #111827;
+    font-weight: 500;
+}
+
+/* Make specific sections more prominent */
+#bookingDetailsContent .car-info-section {
+    background: #f0f9ff;
+    border-left: 4px solid #3b82f6;
+}
+
+#bookingDetailsContent .payment-info-section {
+    background: #f0fdf4;
+    border-left: 4px solid #10b981;
+}
+
+#bookingDetailsContent .customer-info-section {
+    background: #fef7ed;
+    border-left: 4px solid #f59e0b;
+}
+
+#bookingDetailsContent .booking-info-section {
+    background: #faf5ff;
+    border-left: 4px solid #8b5cf6;
+}
+
+/* Status badge colors */
+#bookingDetailsContent .status-badge.pending {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+#bookingDetailsContent .status-badge.confirmed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+#bookingDetailsContent .status-badge.active {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+#bookingDetailsContent .status-badge.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+#bookingDetailsContent .status-badge.cancelled {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    #bookingDetailsContent .info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    #bookingDetailsContent .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    #bookingDetailsContent .info-value {
+        text-align: left;
+    }
+    
+    #bookingDetailsModal .modal-content {
+        margin: 1rem;
+        max-height: 90vh;
+    }
+}
+
+/* Compact Add Car Form Styles with Image URL */
+#add-car.tab-content {
+    padding: 0;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.add-car-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 0;
+}
+
+.add-car-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.add-car-header p {
+    margin: 0.25rem 0 0 0;
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+.add-car-container {
+    background: white;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+}
+
+#addCarForm {
+    padding: 1.5rem;
+}
+
+/* Compact Form Sections */
+.form-section-compact {
+    background: #f8fafc;
+    padding: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 1.25rem;
+    position: relative;
+}
+
+.form-section-compact::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.form-section-compact h4 {
+    color: #1e293b;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-section-compact h4 i {
+    color: #667eea;
+    font-size: 1em;
+}
+
+/* Compact Form Grids */
+.form-grid-2-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-grid-3-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Compact Form Groups */
+.form-group-compact {
+    margin-bottom: 1rem;
+}
+
+.form-group-compact label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.form-group-compact label.required::after {
+    content: ' *';
+    color: #ef4444;
+}
+
+.form-group-compact input,
+.form-group-compact select,
+.form-group-compact textarea {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.form-group-compact input:focus,
+.form-group-compact select:focus,
+.form-group-compact textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* Compact Image Preview */
+.image-preview-section-compact {
+    text-align: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 6px;
+    border: 1px dashed #7dd3fc;
+    margin-top: 0.5rem;
+}
+
+#carImagePreview {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#carImagePreviewPlaceholder {
+    color: #64748b;
+    font-size: 0.8rem;
+    padding: 1rem;
+}
+
+#carImagePreviewPlaceholder i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #94a3b8;
+    display: block;
+}
+
+.image-url-help {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* Compact Checkbox */
+.checkbox-group-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #f0f9ff;
+    border-radius: 6px;
+    border: 1px solid #e0f2fe;
+}
+
+.checkbox-group-compact input[type="checkbox"] {
+    width: auto;
+    transform: scale(1.1);
+}
+
+.checkbox-group-compact label {
+    margin: 0;
+    font-weight: 600;
+    color: #0369a1;
+    font-size: 0.875rem;
+}
+
+/* Compact Price Display */
+.price-display-compact {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.price-item-compact {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%);
+    border-radius: 6px;
+    border: 1px solid #fdba74;
+}
+
+.price-item-compact .label {
+    font-size: 0.8rem;
+    color: #92400e;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.price-item-compact .value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ea580c;
+}
+
+/* Compact Buttons */
+.form-actions-compact {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.btn-submit-compact {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-submit-compact:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-reset-compact {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-reset-compact:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
+/* Feature Tags Compact */
+.features-tags-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+}
+
+.feature-tag-compact {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Responsive Design for Compact Form */
+@media (max-width: 768px) {
+    #add-car.tab-content {
+        margin: 0 0.5rem;
+    }
+    
+    .add-car-header {
+        padding: 1rem;
+    }
+    
+    .add-car-header h3 {
+        font-size: 1.25rem;
+    }
+    
+    #addCarForm {
+        padding: 1rem;
+    }
+    
+    .form-section-compact {
+        padding: 1rem;
+    }
+    
+    .form-grid-2-compact,
+    .form-grid-3-compact {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .form-actions-compact {
+        flex-direction: column;
+    }
+    
+    .price-display-compact {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .add-car-header {
+        padding: 0.75rem;
+    }
+    
+    #addCarForm {
+        padding: 0.75rem;
+    }
+    
+    .form-section-compact {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    #carImagePreview {
+        max-height: 120px;
+    }
+}
+
+
     </style>
 </head>
 <body>
@@ -635,6 +1443,9 @@
                 </div>
                 <div class="menu-item" data-tab="customers">
                     <i class="fas fa-users"></i> Customer Management
+                </div>
+                <div class="menu-item" data-tab="admin-management">
+                    <i class="fas fa-user-shield"></i> Admin Management
                 </div>
                 <div class="menu-item" data-tab="cars-management">
                     <i class="fas fa-car"></i> Manage Cars
@@ -733,31 +1544,45 @@
             </div>
 
             <!-- All Bookings Tab -->
-            <div id="bookings" class="tab-content">
-                <div class="table-header">
-                    <h3><i class="fas fa-calendar-check"></i> All Customer Bookings</h3>
-                    <div class="filters">
-                        <select id="statusFilter" onchange="loadAllBookings()">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <input type="date" id="dateFilter" onchange="loadAllBookings()">
-                        <button class="btn btn-primary" onclick="loadAllBookings()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-                <div id="allBookingsList" class="table-container">
-                    <div class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading all bookings...</p>
-                    </div>
-                </div>
+<div id="bookings" class="tab-content">
+    <div class="table-header">
+        <div class="header-title">
+            <h3><i class="fas fa-calendar-check"></i> All Customer Bookings</h3>
+            <div id="filterStatusDisplay" class="filter-status-display">
+                <!-- Filter status will be displayed here -->
             </div>
+        </div>
+        <div class="filters">
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter" onchange="loadAllBookings()">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="dateFilter">Date:</label>
+                <input type="date" id="dateFilter" onchange="loadAllBookings()">
+            </div>
+            <button class="btn btn-secondary" onclick="clearFilters()">
+                <i class="fas fa-times"></i> Clear
+            </button>
+            <button class="btn btn-primary" onclick="loadAllBookings()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    <div id="allBookingsList" class="table-container">
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading all bookings...</p>
+        </div>
+    </div>
+</div>
 
             <!-- Customer Management Tab -->
             <div id="customers" class="tab-content">
@@ -771,6 +1596,40 @@
                     <div class="loading">
                         <i class="fas fa-spinner fa-spin"></i>
                         <p>Loading customers...</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Customer Details Modal -->
+<div id="customerDetailsModal" class="modal">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3><i class="fas fa-user"></i> Customer Details</h3>
+            <span class="close" onclick="closeModal('customerDetailsModal')">&times;</span>
+        </div>
+        <div id="customerDetailsContent" class="modal-body">
+            <!-- Customer details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+
+
+            <!-- Admin Management Tab -->
+            <div id="admin-management" class="tab-content">
+                <div class="table-header">
+                    <h3><i class="fas fa-user-shield"></i> Admin Management</h3>
+                    <div class="filters">
+                        <button class="btn btn-primary" onclick="loadAdmins()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div id="adminsList" class="table-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading admin accounts...</p>
                     </div>
                 </div>
             </div>
@@ -798,120 +1657,158 @@
                 </div>
             </div>
 
-            <!-- Add New Car Tab -->
-            <div id="add-car" class="tab-content">
-                <div style="margin-bottom: 2rem;">
-                    <h2 style="margin: 0 0 0.5rem 0; color: #1e293b;">Add New Car</h2>
-                    <p style="margin: 0; color: #64748b;">Add a new car to your rental fleet</p>
+<!-- Add Car Tab -->
+<div id="add-car" class="tab-content">
+    <div class="add-car-header">
+        <h3><i class="fas fa-plus-circle"></i> Add New Car</h3>
+        <p>Add a new car to your rental fleet</p>
+    </div>
+    
+    <div class="add-car-container">
+        <form id="addCarForm">
+            <!-- Car Information Section -->
+            <div class="form-section-compact">
+                <h4><i class="fas fa-car"></i> Car Details</h4>
+                <div class="form-grid-2-compact">
+                    <div class="form-group-compact">
+                        <label for="carMake" class="required">Make</label>
+                        <input type="text" id="carMake" required placeholder="Toyota, Honda, etc.">
+                    </div>
+                    <div class="form-group-compact">
+                        <label for="carModel" class="required">Model</label>
+                        <input type="text" id="carModel" required placeholder="Camry, Civic, etc.">
+                    </div>
+                </div>
+                
+                <div class="form-grid-3-compact">
+                    <div class="form-group-compact">
+                        <label for="carYear" class="required">Year</label>
+                        <input type="number" id="carYear" required min="2010" max="2024" value="2024">
+                    </div>
+                    <div class="form-group-compact">
+                        <label for="carType" class="required">Type</label>
+                        <select id="carType" required>
+                            <option value="">Select Type</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Sedan">Sedan</option>
+                            <option value="Hatchback">Hatchback</option>
+                            <option value="MPV">MPV</option>
+                            <option value="Luxury">Luxury</option>
+                            <option value="Sports">Sports</option>
+                        </select>
+                    </div>
+                    <div class="form-group-compact">
+                        <label for="carSeats" class="required">Seats</label>
+                        <input type="number" id="carSeats" required min="2" max="9" value="5">
+                    </div>
                 </div>
 
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3><i class="fas fa-car-side"></i> Car Information</h3>
+                <div class="form-grid-2-compact">
+                    <div class="form-group-compact">
+                        <label for="carFuelType" class="required">Fuel Type</label>
+                        <select id="carFuelType" required>
+                            <option value="">Select Fuel</option>
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
                     </div>
-                    
-                    <form id="addCarForm" style="padding: 2rem;">
-                        <div class="form-grid-2" style="margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="carMake">Company/Make *</label>
-                                <input type="text" id="carMake" required placeholder="e.g., Toyota, Mahindra">
-                            </div>
-                            <div class="form-group">
-                                <label for="carModel">Model *</label>
-                                <input type="text" id="carModel" required placeholder="e.g., Fortuner, Thar">
-                            </div>
-                        </div>
-
-                        <div class="form-grid-3" style="margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="carYear">Year *</label>
-                                <input type="number" id="carYear" required min="2010" max="2024" value="2024">
-                            </div>
-                            <div class="form-group">
-                                <label for="carType">Type *</label>
-                                <select id="carType" required>
-                                    <option value="">Select Type</option>
-                                    <option value="SUV">SUV</option>
-                                    <option value="Sedan">Sedan</option>
-                                    <option value="Hatchback">Hatchback</option>
-                                    <option value="MPV">MPV</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="carSeats">Seats *</label>
-                                <input type="number" id="carSeats" required min="2" max="9" value="5">
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2" style="margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="carFuelType">Fuel Type *</label>
-                                <select id="carFuelType" required>
-                                    <option value="">Select Fuel Type</option>
-                                    <option value="Petrol">Petrol</option>
-                                    <option value="Diesel">Diesel</option>
-                                    <option value="Electric">Electric</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="carTransmission">Transmission *</label>
-                                <select id="carTransmission" required>
-                                    <option value="">Select Transmission</option>
-                                    <option value="Manual">Manual</option>
-                                    <option value="Automatic">Automatic</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2" style="margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="carPricePerDay">Price Per Day (₹) *</label>
-                                <input type="number" id="carPricePerDay" required min="500" step="100" placeholder="e.g., 2500">
-                            </div>
-                            <div class="form-group">
-                                <label for="carPricePerHour">Price Per Hour (₹) *</label>
-                                <input type="number" id="carPricePerHour" required min="50" step="50" placeholder="e.g., 300">
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2" style="margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="carColor">Color</label>
-                                <input type="text" id="carColor" placeholder="e.g., Red, White">
-                            </div>
-                            <div class="form-group">
-                                <label for="carMileage">Mileage</label>
-                                <input type="text" id="carMileage" placeholder="e.g., 15 kmpl">
-                            </div>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="carFeatures">Features (comma separated)</label>
-                            <input type="text" id="carFeatures" placeholder="e.g., AC, Music System, Sunroof">
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="carImageUrl">Image URL *</label>
-                            <input type="url" id="carImageUrl" required placeholder="https://example.com/car-image.jpg">
-                            <small style="color: #64748b; font-size: 0.8rem;">Provide a direct image URL</small>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="carRegistration">Registration Number</label>
-                            <input type="text" id="carRegistration" placeholder="e.g., TS09AB1234">
-                        </div>
-
-                        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                            <button type="button" class="btn btn-secondary" onclick="resetCarForm()">
-                                <i class="fas fa-redo"></i> Reset
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add Car
-                            </button>
-                        </div>
-                    </form>
+                    <div class="form-group-compact">
+                        <label for="carTransmission" class="required">Transmission</label>
+                        <select id="carTransmission" required>
+                            <option value="">Select Transmission</option>
+                            <option value="Manual">Manual</option>
+                            <option value="Automatic">Automatic</option>
+                        </select>
+                    </div>
                 </div>
             </div>
+
+            <!-- Car Image Section -->
+            <div class="form-section-compact">
+                <h4><i class="fas fa-image"></i> Car Image</h4>
+                <div class="form-group-compact">
+                    <label for="carImageUrl" class="required">Image URL</label>
+                    <input type="url" id="carImageUrl" required 
+                           placeholder="https://example.com/car-image.jpg"
+                           oninput="updateCarImagePreview(this.value)">
+                    <span class="image-url-help">Provide a direct image URL for the car</span>
+                </div>
+                
+                <div id="carImagePreviewContainer" class="image-preview-section-compact">
+                    <img id="carImagePreview" src="" alt="Car Preview" style="display: none;">
+                    <div id="carImagePreviewPlaceholder">
+                        <i class="fas fa-car"></i>
+                        <p>Car preview will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Section -->
+            <div class="form-section-compact">
+                <h4><i class="fas fa-tags"></i> Pricing</h4>
+                <div class="price-display-compact">
+                    <div class="price-item-compact">
+                        <div class="label">Per Day</div>
+                        <div class="value">₹<span id="dayPriceDisplay">0</span></div>
+                    </div>
+                    <div class="price-item-compact">
+                        <div class="label">Per Hour</div>
+                        <div class="value">₹<span id="hourPriceDisplay">0</span></div>
+                    </div>
+                </div>
+                <div class="form-grid-2-compact">
+                    <div class="form-group-compact">
+                        <label for="carPricePerDay" class="required">Daily Rate (₹)</label>
+                        <input type="number" id="carPricePerDay" required min="500" step="100" placeholder="1500">
+                    </div>
+                    <div class="form-group-compact">
+                        <label for="carPricePerHour" class="required">Hourly Rate (₹)</label>
+                        <input type="number" id="carPricePerHour" required min="50" step="50" placeholder="200">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Details -->
+            <div class="form-section-compact">
+                <h4><i class="fas fa-info-circle"></i> Additional Details</h4>
+                <div class="form-grid-2-compact">
+                    <div class="form-group-compact">
+                        <label for="carColor">Color</label>
+                        <input type="text" id="carColor" placeholder="Red, White, Black, etc.">
+                    </div>
+                    <div class="form-group-compact">
+                        <label for="carMileage">Mileage</label>
+                        <input type="text" id="carMileage" placeholder="15 kmpl, 20 kmpl, etc.">
+                    </div>
+                </div>
+                <div class="form-group-compact">
+                    <label for="carFeatures">Features (comma separated)</label>
+                    <input type="text" id="carFeatures" placeholder="AC, Music, Sunroof, GPS, etc.">
+                </div>
+                <div class="form-group-compact">
+                    <label for="carRegistration">Registration Number</label>
+                    <input type="text" id="carRegistration" placeholder="TS09AB1234">
+                </div>
+                <div class="checkbox-group-compact">
+                    <input type="checkbox" id="carAvailable" checked>
+                    <label for="carAvailable">Available for booking</label>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions-compact">
+                <button type="reset" class="btn-reset-compact">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+                <button type="submit" class="btn-submit-compact">
+                    <i class="fas fa-plus"></i> Add Car
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
             <!-- Reports Tab -->
             <div id="reports" class="tab-content">
@@ -946,6 +1843,11 @@
                 <!-- Booking details will be loaded here -->
             </div>
         </div>
+    </div>
+
+    <!-- Customer Details Modal -->
+    <div id="customerDetailsModal" class="modal">
+        <!-- This will be created dynamically -->
     </div>
 
     <script src="js/admin.js"></script>

@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Define fixed admin emails - UPDATE THESE TO YOUR ACTUAL EMAILS
+// Define fixed admin emails
 userSchema.statics.adminEmails = [
   'ramanaidupalla359@gmail.com',
   'nleelasairamnakka@gmail.com'

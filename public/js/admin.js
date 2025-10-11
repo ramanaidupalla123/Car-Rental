@@ -10,59 +10,8 @@ const API_BASE = (function() {
     return localUrl;
 })();
 
-// Enhanced fetch with mobile error handling
-async function mobileFetch(url, options = {}) {
-    try {
-        console.log('📡 Admin API Call:', url);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        const fetchOptions = {
-            ...options,
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                ...options.headers
-            }
-        };
-        
-        const response = await fetch(url, fetchOptions);
-        
-        clearTimeout(timeoutId);
-        
-        if (response.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = 'index.html';
-            throw new Error('Session expired. Please login again.');
-        }
-
-        if (response.status === 403) {
-            throw new Error('Access denied. Admin privileges required.');
-        }
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return response;
-    } catch (error) {
-        console.error('📱 Admin Mobile fetch error:', error);
-        
-        if (error.name === 'AbortError') {
-            throw new Error('Request timeout. Please check your internet connection.');
-        }
-        
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            throw new Error('Network connection failed. Please check your internet and try again.');
-        }
-        
-        throw error;
-    }
-}
+// Global variables
+let currentSelectedUserId = null;
 
 // Initialize admin dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -187,18 +136,75 @@ function switchTab(tabName) {
             console.log('👥 Loading customers...');
             loadCustomers();
             break;
+        case 'admin-management':
+            console.log('👑 Loading admin management...');
+            loadAdmins();
+            break;
         case 'cars-management':
             console.log('🚗 Loading cars management...');
             loadAllCars();
             break;
         case 'add-car':
             console.log('➕ Add car form ready');
-            // No data loading needed for add car form
             break;
         case 'reports':
             console.log('📈 Loading reports...');
             loadReports();
             break;
+    }
+}
+
+// Enhanced fetch with mobile error handling
+async function mobileFetch(url, options = {}) {
+    try {
+        console.log('📡 Admin API Call:', url);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const fetchOptions = {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                ...options.headers
+            }
+        };
+        
+        const response = await fetch(url, fetchOptions);
+        
+        clearTimeout(timeoutId);
+        
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+            throw new Error('Session expired. Please login again.');
+        }
+
+        if (response.status === 403) {
+            throw new Error('Access denied. Admin privileges required.');
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('📱 Admin Mobile fetch error:', error);
+        
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout. Please check your internet connection.');
+        }
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            throw new Error('Network connection failed. Please check your internet and try again.');
+        }
+        
+        throw error;
     }
 }
 
@@ -214,12 +220,12 @@ async function loadDashboardStats() {
         
         if (result.success) {
             const stats = result.stats;
-            document.getElementById('totalBookings').textContent = stats.totalBookings.toLocaleString();
-            document.getElementById('confirmedBookings').textContent = stats.confirmedBookings.toLocaleString();
-            document.getElementById('pendingBookings').textContent = stats.pendingBookings.toLocaleString();
-            document.getElementById('activeBookings').textContent = stats.activeBookings.toLocaleString();
-            document.getElementById('totalRevenue').textContent = `₹${stats.totalRevenue.toLocaleString()}`;
-            document.getElementById('todaysBookings').textContent = stats.todaysBookings.toLocaleString();
+            document.getElementById('totalBookings').textContent = stats.totalBookings || 0;
+            document.getElementById('confirmedBookings').textContent = stats.confirmedBookings || 0;
+            document.getElementById('pendingBookings').textContent = stats.pendingBookings || 0;
+            document.getElementById('activeBookings').textContent = stats.activeBookings || 0;
+            document.getElementById('totalRevenue').textContent = `₹${(stats.totalRevenue || 0).toLocaleString()}`;
+            document.getElementById('todaysBookings').textContent = stats.todaysBookings || 0;
             
             console.log('✅ Dashboard statistics loaded successfully');
         } else {
@@ -228,6 +234,14 @@ async function loadDashboardStats() {
     } catch (error) {
         console.error('❌ Error loading stats:', error);
         showNotification('Error loading dashboard statistics: ' + error.message, 'error');
+        
+        // Set default values if API fails
+        document.getElementById('totalBookings').textContent = '0';
+        document.getElementById('confirmedBookings').textContent = '0';
+        document.getElementById('pendingBookings').textContent = '0';
+        document.getElementById('activeBookings').textContent = '0';
+        document.getElementById('totalRevenue').textContent = '₹0';
+        document.getElementById('todaysBookings').textContent = '0';
     }
 }
 
@@ -250,6 +264,7 @@ async function loadRecentBookings() {
     } catch (error) {
         console.error('❌ Error loading recent bookings:', error);
         showNotification('Error loading recent bookings: ' + error.message, 'error');
+        displayRecentBookings([]);
     }
 }
 
@@ -287,10 +302,10 @@ function displayRecentBookings(bookings) {
                     </div>
                     <div class="booking-meta">
                         <div>
-                            <div style="font-size: 0.9rem; color: #64748b;">Booking Date</div>
-                            <div style="font-weight: 500;">${new Date(booking.startDate).toLocaleDateString()}</div>
+                            <div style="font-size: 0.9rem; color: #64748b;">Dates</div>
+                            <div style="font-weight: 500;">${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}</div>
                         </div>
-                        <div class="booking-price">₹${booking.totalPrice}</div>
+                        <div class="booking-price">₹${booking.totalPrice || 0}</div>
                     </div>
                 </div>
             `).join('')}
@@ -298,44 +313,63 @@ function displayRecentBookings(bookings) {
     `;
 }
 
-// Load all bookings with filters
+// Load all bookings with proper filters
 async function loadAllBookings() {
     try {
-        console.log('📋 Loading all bookings...');
+        console.log('📋 Loading all bookings with filters...');
         showLoading('allBookingsList', 'Loading customer bookings...');
         
-        const statusFilter = document.getElementById('statusFilter').value;
-        const dateFilter = document.getElementById('dateFilter').value;
+        const statusFilter = document.getElementById('statusFilter')?.value;
+        const dateFilter = document.getElementById('dateFilter')?.value;
         
         let url = `${API_BASE}/admin/bookings`;
         const params = new URLSearchParams();
         
-        if (statusFilter) params.append('status', statusFilter);
-        if (dateFilter) params.append('date', dateFilter);
+        // Add filters only if they have values
+        if (statusFilter && statusFilter !== 'all') {
+            params.append('status', statusFilter);
+        }
+        
+        if (dateFilter) {
+            params.append('date', dateFilter);
+        }
+        
+        // Always add limit
         params.append('limit', '100');
         
-        if (params.toString()) url += `?${params.toString()}`;
+        if (params.toString()) {
+            url += `?${params.toString()}`;
+        }
         
-        console.log('📡 Fetching bookings from:', url);
+        console.log('📡 Fetching bookings with filters:', { statusFilter, dateFilter, url });
         
         const response = await mobileFetch(url);
         const result = await response.json();
         
-        console.log('📋 All Bookings API Response:', result);
+        console.log('📋 Filtered Bookings API Response:', result);
         
         if (result.success) {
             displayAllBookings(result.bookings);
-            console.log('✅ All bookings loaded successfully');
+            console.log(`✅ Loaded ${result.bookings.length} bookings with filters: status=${statusFilter || 'all'}, date=${dateFilter || 'all'}`);
         } else {
             throw new Error(result.message || 'Failed to load bookings');
         }
     } catch (error) {
         console.error('❌ Error loading all bookings:', error);
         showNotification('Error loading bookings: ' + error.message, 'error');
+        document.getElementById('allBookingsList').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Bookings</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadAllBookings()">Try Again</button>
+            </div>
+        `;
     }
 }
 
-// Display all bookings in table
+
+// Display all bookings in table with filter info
 function displayAllBookings(bookings) {
     const container = document.getElementById('allBookingsList');
     
@@ -344,18 +378,40 @@ function displayAllBookings(bookings) {
             <div class="no-data">
                 <i class="fas fa-calendar-times"></i>
                 <h3>No Bookings Found</h3>
-                <p>No bookings match your current filters.</p>
+                <p>No bookings match your current filters. Try changing your filter criteria.</p>
+                <button class="btn btn-primary" onclick="clearFilters()">Clear Filters</button>
             </div>
         `;
         return;
     }
     
-    container.innerHTML = `
+    const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+    const dateFilter = document.getElementById('dateFilter')?.value || 'all';
+    
+    let filterInfo = '';
+    if (statusFilter !== 'all' || dateFilter !== 'all') {
+        filterInfo = `
+            <div style="background: #f0f9ff; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; border-left: 4px solid #3b82f6;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; color: #0369a1;">
+                    <i class="fas fa-filter"></i>
+                    <strong>Active Filters:</strong>
+                    ${statusFilter !== 'all' ? `<span class="status-badge ${statusFilter}">${statusFilter}</span>` : ''}
+                    ${dateFilter !== 'all' ? `<span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${getDateFilterLabel(dateFilter)}</span>` : ''}
+                    <button onclick="clearFilters()" style="margin-left: auto; background: none; border: none; color: #0369a1; cursor: pointer;">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = filterInfo + `
         <div style="overflow-x: auto;">
             <table class="bookings-table">
                 <thead>
                     <tr>
                         <th>Customer</th>
+                        <th>Contact</th>
                         <th>Car</th>
                         <th>Dates</th>
                         <th>Amount</th>
@@ -370,7 +426,11 @@ function displayAllBookings(bookings) {
                                 <div class="customer-info">
                                     <div class="customer-name">${booking.user?.name || 'N/A'}</div>
                                     <div class="customer-detail">${booking.user?.email || 'N/A'}</div>
-                                    <div class="customer-detail">${booking.user?.phone || 'N/A'}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="customer-detail"><i class="fas fa-phone"></i> ${booking.user?.phone || 'N/A'}</div>
                                 </div>
                             </td>
                             <td>
@@ -385,7 +445,7 @@ function displayAllBookings(bookings) {
                                     <div class="customer-detail">to ${new Date(booking.endDate).toLocaleDateString()}</div>
                                 </div>
                             </td>
-                            <td><strong>₹${booking.totalPrice}</strong></td>
+                            <td><strong>₹${booking.totalPrice || 0}</strong></td>
                             <td>
                                 <span class="status-badge ${booking.status}">${booking.status}</span>
                             </td>
@@ -411,9 +471,27 @@ function displayAllBookings(bookings) {
         </div>
         <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
             Showing ${bookings.length} bookings
+            ${statusFilter !== 'all' ? ` • Filtered by: ${statusFilter}` : ''}
+            ${dateFilter !== 'all' ? ` • Date: ${getDateFilterLabel(dateFilter)}` : ''}
         </div>
     `;
 }
+
+// Helper function to get date filter label
+function getDateFilterLabel(dateFilter) {
+    const labels = {
+        'today': 'Today',
+        'week': 'Last 7 Days',
+        'month': 'Last 30 Days',
+        'year': 'Last Year',
+        'all': 'All Time'
+    };
+    return labels[dateFilter] || dateFilter;
+}
+
+
+
+
 
 // Load customers
 async function loadCustomers() {
@@ -442,10 +520,18 @@ async function loadCustomers() {
     } catch (error) {
         console.error('❌ Error loading customers:', error);
         showNotification('Error loading customers: ' + error.message, 'error');
+        document.getElementById('customersList').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Customers</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadCustomers()">Try Again</button>
+            </div>
+        `;
     }
 }
 
-// Display customers
+// Display customers with enhanced details
 function displayCustomers(users) {
     const container = document.getElementById('customersList');
     
@@ -454,166 +540,467 @@ function displayCustomers(users) {
             <div class="no-data">
                 <i class="fas fa-users-slash"></i>
                 <h3>No Customers Found</h3>
-                <p>No customers match your search criteria.</p>
+                <p>No customers match your current search.</p>
             </div>
         `;
         return;
     }
     
+    // Filter only regular users (non-admins)
+    const customerUsers = users.filter(user => user.role === 'user');
+    
+    if (customerUsers.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-users"></i>
+                <h3>No Customers Found</h3>
+                <p>Only admin accounts exist in the system.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isPermanentAdmin = currentUser.email === 'ramanaidupalla359@gmail.com';
+
     container.innerHTML = `
         <div style="overflow-x: auto;">
             <table class="bookings-table">
                 <thead>
                     <tr>
                         <th>Customer Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
+                        <th>Contact Information</th>
                         <th>Total Bookings</th>
-                        <th>Total Spent</th>
+                        <th>Total Spent (₹)</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${users.map(customer => `
+                    ${customerUsers.map(customer => {
+                        const totalBookings = customer.bookingCount || 0;
+                        const totalSpent = customer.totalSpent || 0;
+                        
+                        return `
                         <tr>
                             <td>
                                 <div class="customer-info">
                                     <div class="customer-name">${customer.name}</div>
-                                    <div class="customer-detail">Member since ${new Date(customer.createdAt).getFullYear()}</div>
+                                    <div class="customer-detail">Joined: ${new Date(customer.createdAt).toLocaleDateString()}</div>
                                 </div>
                             </td>
-                            <td>${customer.email}</td>
-                            <td>${customer.phone}</td>
                             <td>
-                                <span class="status-badge completed">${customer.bookingCount || 0}</span>
+                                <div class="customer-info">
+                                    <div class="customer-detail"><i class="fas fa-envelope"></i> ${customer.email}</div>
+                                    <div class="customer-detail"><i class="fas fa-phone"></i> ${customer.phone || 'Not provided'}</div>
+                                </div>
                             </td>
                             <td>
-                                <strong>₹${(customer.totalSpent || 0).toLocaleString()}</strong>
+                                <span class="status-badge" style="background: #3b82f6; color: white; font-size: 0.9rem;">
+                                    ${totalBookings}
+                                </span>
+                            </td>
+                            <td>
+                                <strong style="color: #059669; font-size: 1.1rem;">₹${totalSpent.toLocaleString()}</strong>
+                            </td>
+                            <td>
+                                <span class="status-badge ${customer.isActive ? 'active' : 'cancelled'}">
+                                    ${customer.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-view" onclick="viewCustomerDetails('${customer._id}')">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </button>
+                                    ${isPermanentAdmin ? `
+                                        <button class="btn-toggle-availability" onclick="makeUserAdmin('${customer._id}', '${customer.name}')" style="margin-left: 0.5rem;">
+                                            <i class="fas fa-user-shield"></i> Make Admin
+                                        </button>
+                                    ` : ''}
+                                </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
         </div>
         <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
-            Showing ${users.length} customers
+            Showing ${customerUsers.length} customers
         </div>
     `;
 }
 
-// CAR MANAGEMENT FUNCTIONS
+// View customer details - FIXED VERSION
+async function viewCustomerDetails(userId) {
+    try {
+        console.log(`👤 Viewing customer details: ${userId}`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/users/${userId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayCustomerDetails(result.user);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error loading customer details:', error);
+        showNotification('Error loading customer details: ' + error.message, 'error');
+    }
+}
 
-// Load all cars for management - FIXED VERSION
+// Display customer details with dark text
+function displayCustomerDetails(user) {
+    const modal = document.getElementById('customerDetailsModal');
+    const content = document.getElementById('customerDetailsContent');
+    
+    // Get user's bookings for detailed history
+    loadCustomerBookings(user._id).then(bookings => {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isPermanentAdmin = currentUser.email === 'ramanaidupalla359@gmail.com';
+
+        content.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px;">
+                    <h4 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-user" style="color: #3b82f6;"></i> Customer Information
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Name:</span>
+                            <span>${user.name || 'N/A'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Email:</span>
+                            <span>${user.email || 'N/A'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Phone:</span>
+                            <span>${user.phone || 'N/A'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Role:</span>
+                            <span class="status-badge ${user.role}">${user.role}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Member Since:</span>
+                            <span>${new Date(user.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        ${user.address ? `
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="font-weight: 600; color: #475569;">Address:</span>
+                                <span style="text-align: right;">${user.address.street || ''}, ${user.address.city || ''}, ${user.address.state || ''}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px;">
+                    <h4 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-chart-bar" style="color: #10b981;"></i> Booking Statistics
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Total Bookings:</span>
+                            <span style="font-weight: bold;">${user.stats?.totalBookings || 0}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Total Spent:</span>
+                            <span style="font-weight: bold; color: #059669;">₹${(user.stats?.totalSpent || 0).toLocaleString()}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-weight: 600; color: #475569;">Account Status:</span>
+                            <span class="status-badge ${user.isActive ? 'active' : 'cancelled'}">${user.isActive ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                    
+                    ${isPermanentAdmin ? `
+                        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                            <button class="btn btn-primary" onclick="makeUserAdmin('${user._id}', '${user.name}')" style="width: 100%;">
+                                <i class="fas fa-user-shield"></i> Make Admin
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; grid-column: 1 / -1;">
+                    <h4 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-history" style="color: #f59e0b;"></i> Booking History
+                    </h4>
+                    ${bookings.length > 0 ? `
+                        <div style="overflow-x: auto;">
+                            <table class="bookings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Car</th>
+                                        <th>Dates</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Booked On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${bookings.map(booking => `
+                                        <tr>
+                                            <td>
+                                                <div class="customer-info">
+                                                    <div class="customer-name">${booking.car?.make || ''} ${booking.car?.model || ''}</div>
+                                                    <div class="customer-detail">${booking.car?.type || ''}</div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="customer-info">
+                                                    <div class="customer-detail">${new Date(booking.startDate).toLocaleDateString()}</div>
+                                                    <div class="customer-detail">to ${new Date(booking.endDate).toLocaleDateString()}</div>
+                                                </div>
+                                            </td>
+                                            <td><strong>₹${booking.totalPrice || 0}</strong></td>
+                                            <td>
+                                                <span class="status-badge ${booking.status}">${booking.status}</span>
+                                            </td>
+                                            <td>${new Date(booking.createdAt).toLocaleDateString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : `
+                        <div style="text-align: center; padding: 2rem; color: #64748b;">
+                            <i class="fas fa-calendar-times" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                            <p>No booking history found for this customer.</p>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    });
+
+    modal.style.display = 'block';
+}
+
+// Load customer bookings for details
+async function loadCustomerBookings(userId) {
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/bookings?limit=50`);
+        const result = await response.json();
+        
+        if (result.success) {
+            // Filter bookings for this specific user
+            const userBookings = result.bookings.filter(booking => 
+                booking.user && booking.user._id === userId
+            );
+            return userBookings;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error loading customer bookings:', error);
+        return [];
+    }
+}
+
+// Make user admin (no password required)
+async function makeUserAdmin(userId, userName) {
+    if (!isPermanentAdmin()) {
+        showNotification('Only permanent admin can make users admin.', 'error');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to make "${userName}" an admin?`)) {
+        return;
+    }
+
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/users/${userId}/make-admin`, {
+            method: 'PUT',
+            body: JSON.stringify({})
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`"${userName}" has been made admin successfully!`, 'success');
+            closeModal('customerDetailsModal');
+            loadCustomers();
+            loadAdmins();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error making user admin:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Check if current user is permanent admin
+function isPermanentAdmin() {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const permanentAdmins = [
+        'ramanaidupalla359@gmail.com',
+        'nleelasairamnakka@gmail.com'
+    ];
+    return permanentAdmins.includes(currentUser.email);
+}
+
+// Load admin users
+async function loadAdmins() {
+    try {
+        console.log('👑 Loading admin accounts...');
+        showLoading('adminsList', 'Loading admin accounts...');
+        
+        const response = await mobileFetch(`${API_BASE}/admin/users`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAdmins(result.users);
+            console.log('✅ Admin accounts loaded successfully');
+        } else {
+            throw new Error(result.message || 'Failed to load admin accounts');
+        }
+    } catch (error) {
+        console.error('❌ Error loading admin accounts:', error);
+        showNotification('Error loading admin accounts: ' + error.message, 'error');
+        document.getElementById('adminsList').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Admins</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadAdmins()">Try Again</button>
+            </div>
+        `;
+    }
+}
+
+// Display admin accounts
+function displayAdmins(users) {
+    const container = document.getElementById('adminsList');
+    
+    // Filter only admin users
+    const adminUsers = users.filter(user => user.role === 'admin');
+    
+    if (adminUsers.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-user-shield"></i>
+                <h3>No Admin Accounts</h3>
+                <p>No admin accounts found in the system.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isCurrentUserPermanentAdmin = isPermanentAdmin(); // Use the function
+
+    container.innerHTML = `
+        <div style="overflow-x: auto;">
+            <table class="bookings-table">
+                <thead>
+                    <tr>
+                        <th>Admin Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Account Created</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${adminUsers.map(admin => {
+                        const permanentAdmins = [
+                            'ramanaidupalla359@gmail.com',
+                            'nleelasairamnakka@gmail.com'
+                        ];
+                        const isPermanentAdminAccount = permanentAdmins.includes(admin.email);
+                        return `
+                        <tr>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="customer-name">
+                                        ${admin.name} 
+                                        ${isPermanentAdminAccount ? ' 👑' : ''}
+                                    </div>
+                                    <div class="customer-detail">${isPermanentAdminAccount ? 'Permanent Admin' : 'Admin User'}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="customer-detail"><i class="fas fa-envelope"></i> ${admin.email}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="customer-detail">${admin.phone || 'Not provided'}</div>
+                                </div>
+                            </td>
+                            <td>${new Date(admin.createdAt).toLocaleDateString()}</td>
+                            <td>
+                                <span class="status-badge ${isPermanentAdminAccount ? 'active' : 'confirmed'}">
+                                    ${isPermanentAdminAccount ? 'Permanent' : 'Admin'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-view" onclick="viewCustomerDetails('${admin._id}')">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                    ${!isPermanentAdminAccount && isCurrentUserPermanentAdmin ? `
+                                        <button class="btn-remove-car" onclick="demoteAdmin('${admin._id}', '${admin.name}')" style="margin-left: 0.5rem;">
+                                            <i class="fas fa-user-minus"></i> Demote
+                                        </button>
+                                    ` : `
+                                        ${isPermanentAdminAccount ? `
+                                            <span style="color: #6b7280; font-size: 0.8rem; padding: 0.4rem 0.8rem; background: #f3f4f6; border-radius: 4px;">
+                                                <i class="fas fa-lock"></i> Permanent
+                                            </span>
+                                        ` : ''}
+                                    `}
+                                </div>
+                            </td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
+            Showing ${adminUsers.length} admin accounts • Permanent admins: ramanaidupalla359@gmail.com, nleelasairamnakka@gmail.com
+        </div>
+    `;
+}
+
+// Load all cars for management with proper filtering
 async function loadAllCars() {
     try {
         console.log('🚗 Loading all cars for management...');
-        const carsList = document.getElementById('carsList');
-        const statusFilter = document.getElementById('carStatusFilter').value;
-        
         showLoading('carsList', 'Loading cars...');
         
-        // Use admin endpoint to get ALL cars (including unavailable ones)
+        const statusFilter = document.getElementById('carStatusFilter')?.value;
+        
         const response = await mobileFetch(`${API_BASE}/admin/cars`);
         const result = await response.json();
 
         if (result.success) {
             let cars = result.cars;
             
-            console.log('=== CAR FILTERING DEBUG ===');
-            console.log(`Total cars from admin API: ${cars.length}`);
-            console.log(`Current filter: "${statusFilter}"`);
-            
-            // Log all cars with their availability for debugging
-            cars.forEach((car, index) => {
-                console.log(`${index + 1}. ${car.make} ${car.model} - Available: ${car.available}`);
-            });
-
-            // Apply filter
-            let filteredCars = cars;
+            // Apply availability filter
             if (statusFilter === 'available') {
-                filteredCars = cars.filter(car => car.available === true);
-                console.log(`✅ Available cars: ${filteredCars.length}`);
+                cars = cars.filter(car => car.available === true);
             } else if (statusFilter === 'unavailable') {
-                filteredCars = cars.filter(car => car.available === false);
-                console.log(`✅ Unavailable cars: ${filteredCars.length}`);
+                cars = cars.filter(car => car.available === false);
             }
-
-            console.log(`Final cars to display: ${filteredCars.length}`);
-            console.log('=== END DEBUG ===');
-
-            if (filteredCars.length === 0) {
-                carsList.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-car"></i>
-                        <h3>No ${statusFilter ? statusFilter + ' ' : ''}cars found</h3>
-                        <p>${statusFilter === 'unavailable' ? 
-                            'All cars are currently available for booking.' : 
-                            'No cars match your current filter criteria.'}
-                        </p>
-                        <div style="margin-top: 1rem;">
-                            <button class="btn btn-primary" onclick="document.getElementById('carStatusFilter').value = ''; loadAllCars();">
-                                Show All Cars
-                            </button>
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
-            carsList.innerHTML = `
-                <div class="cars-grid-admin">
-                    ${filteredCars.map(car => `
-                        <div class="car-card-admin ${!car.available ? 'unavailable' : ''}">
-                            <img src="${car.images && car.images.length > 0 ? car.images[0].url : 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
-                                 alt="${car.make} ${car.model}" 
-                                 class="car-image-admin"
-                                 onerror="this.src='https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
-                            <div class="car-info-admin">
-                                <div class="car-header-admin">
-                                    <h4 class="car-name-admin">${car.make} ${car.model}</h4>
-                                    <span class="car-status-badge ${car.available ? 'available' : 'unavailable'}">
-                                        ${car.available ? 'Available' : 'Unavailable'}
-                                    </span>
-                                </div>
-                                <div class="car-details-admin">
-                                    <span class="car-detail-item">
-                                        <i class="fas fa-car"></i> ${car.type}
-                                    </span>
-                                    <span class="car-detail-item">
-                                        <i class="fas fa-users"></i> ${car.seats} seats
-                                    </span>
-                                    <span class="car-detail-item">
-                                        <i class="fas fa-gas-pump"></i> ${car.fuelType}
-                                    </span>
-                                </div>
-                                <div class="car-price-admin">
-                                    ₹${car.pricePerHour}/hour • ₹${car.pricePerDay}/day
-                                </div>
-                                <div class="car-actions-admin">
-                                    <button class="btn-toggle-availability" onclick="toggleCarAvailability('${car._id}', ${!car.available})">
-                                        ${car.available ? 'Make Unavailable' : 'Make Available'}
-                                    </button>
-                                    <button class="btn-remove-car" onclick="removeCar('${car._id}')">
-                                        <i class="fas fa-trash"></i> Remove
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
-                    Showing ${filteredCars.length} ${statusFilter ? statusFilter : 'all'} cars
-                </div>
-            `;
-            console.log('✅ Cars loaded and displayed successfully');
+            
+            displayCars(cars);
+            console.log(`✅ Loaded ${cars.length} cars with filter: ${statusFilter || 'all'}`);
         } else {
             throw new Error(result.message);
         }
     } catch (error) {
         console.error('❌ Error loading cars:', error);
+        showNotification('Error loading cars: ' + error.message, 'error');
         document.getElementById('carsList').innerHTML = `
             <div class="no-data">
                 <i class="fas fa-exclamation-triangle"></i>
-                <h3>Error loading cars</h3>
+                <h3>Error Loading Cars</h3>
                 <p>${error.message}</p>
                 <button class="btn btn-primary" onclick="loadAllCars()">Try Again</button>
             </div>
@@ -621,63 +1008,368 @@ async function loadAllCars() {
     }
 }
 
-// Toggle car availability - ENHANCED VERSION
-async function toggleCarAvailability(carId, makeAvailable) {
-    if (!confirm(`Are you sure you want to make this car ${makeAvailable ? 'available' : 'unavailable'}?`)) {
+// Display cars with edit functionality
+function displayCars(cars) {
+    const container = document.getElementById('carsList');
+    
+    if (!cars || cars.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-car"></i>
+                <h3>No Cars Found</h3>
+                <p>No cars found in the system.</p>
+            </div>
+        `;
         return;
     }
 
+    container.innerHTML = `
+        <div class="cars-grid-admin">
+            ${cars.map(car => `
+                <div class="car-card-admin ${!car.available ? 'unavailable' : ''}">
+                    <img src="${car.images && car.images.length > 0 ? car.images[0].url : 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
+                         alt="${car.make} ${car.model}" 
+                         class="car-image-admin">
+                    <div class="car-info-admin">
+                        <div class="car-header-admin">
+                            <h4 class="car-name-admin">${car.make} ${car.model}</h4>
+                            <span class="car-status-badge ${car.available ? 'available' : 'unavailable'}">
+                                ${car.available ? 'Available' : 'Unavailable'}
+                            </span>
+                        </div>
+                        <div class="car-details-admin">
+                            <span class="car-detail-item">
+                                <i class="fas fa-car"></i> ${car.type}
+                            </span>
+                            <span class="car-detail-item">
+                                <i class="fas fa-users"></i> ${car.seats} seats
+                            </span>
+                            <span class="car-detail-item">
+                                <i class="fas fa-gas-pump"></i> ${car.fuelType}
+                            </span>
+                        </div>
+                        <div class="car-price-admin">
+                            ₹${car.pricePerHour}/hour • ₹${car.pricePerDay}/day
+                        </div>
+                        <div class="car-actions-admin">
+                            <button class="btn-edit-car" onclick="editCar('${car._id}')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn-toggle-availability" onclick="toggleCarAvailability('${car._id}', ${!car.available})">
+                                ${car.available ? 'Make Unavailable' : 'Make Available'}
+                            </button>
+                            <button class="btn-remove-car" onclick="removeCar('${car._id}')">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
+            Showing ${cars.length} cars
+        </div>
+    `;
+}
+
+// Load enhanced reports with comprehensive analytics
+async function loadReports() {
     try {
-        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}/availability`, {
-            method: 'PUT',
-            body: JSON.stringify({ available: makeAvailable })
-        });
-
+        console.log('📈 Loading enhanced reports...');
+        showLoading('reportsContent', 'Generating comprehensive reports...');
+        
+        const period = document.getElementById('reportPeriod')?.value || '30';
+        
+        const response = await mobileFetch(`${API_BASE}/admin/reports?period=${period}`);
         const result = await response.json();
-
+        
+        console.log('📈 Enhanced Reports API Response:', result);
+        
         if (result.success) {
-            showNotification(`Car ${makeAvailable ? 'made available' : 'made unavailable'} successfully!`, 'success');
-            
-            // Get current filter to maintain it after refresh
-            const currentFilter = document.getElementById('carStatusFilter').value;
-            
-            // Reload cars with current filter maintained
-            loadAllCars();
-            
-            console.log(`✅ Car availability updated to: ${makeAvailable}`);
+            displayEnhancedReports(result.reports);
+            console.log('✅ Enhanced reports loaded successfully');
         } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Failed to load reports');
         }
     } catch (error) {
-        console.error('❌ Error toggling car availability:', error);
-        showNotification('Error: ' + error.message, 'error');
+        console.error('❌ Error loading enhanced reports:', error);
+        showNotification('Error loading enhanced reports: ' + error.message, 'error');
+        document.getElementById('reportsContent').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Reports</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadReports()">Try Again</button>
+            </div>
+        `;
     }
 }
 
-// Remove car completely
-async function removeCar(carId) {
-    if (!confirm('Are you sure you want to remove this car? This action cannot be undone.')) {
+// Display enhanced reports with comprehensive analytics
+function displayEnhancedReports(reports) {
+    const container = document.getElementById('reportsContent');
+    
+    if (!reports) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-chart-bar"></i>
+                <h3>No Report Data</h3>
+                <p>Unable to generate reports at this time.</p>
+            </div>
+        `;
         return;
     }
+    
+    // Calculate additional metrics
+    const totalCancellations = reports.summary?.revenueByStatus?.cancelled?.count || 0;
+    const cancellationRate = reports.summary?.totalBookings ? 
+        ((totalCancellations / reports.summary.totalBookings) * 100).toFixed(1) : 0;
+    
+    const avgBookingValue = reports.summary?.totalBookings ? 
+        (reports.summary.totalRevenue / reports.summary.totalBookings).toFixed(0) : 0;
 
-    try {
-        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showNotification('Car removed successfully!', 'success');
-            loadAllCars();
-            console.log('✅ Car removed successfully');
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error) {
-        console.error('❌ Error removing car:', error);
-        showNotification('Error: ' + error.message, 'error');
+    let reportsHTML = `
+        <!-- Key Metrics Cards -->
+        <div class="reports-grid">
+            <div class="report-card revenue">
+                <h4><i class="fas fa-rupee-sign"></i> Total Revenue</h4>
+                <div class="report-value revenue">₹${(reports.summary?.totalRevenue || 0).toLocaleString()}</div>
+                <div class="report-change">
+                    <i class="fas fa-chart-line"></i>
+                    From ${reports.summary?.totalBookings || 0} successful bookings
+                </div>
+                <div class="report-change">
+                    Avg: ₹${avgBookingValue} per booking
+                </div>
+            </div>
+            
+            <div class="report-card bookings">
+                <h4><i class="fas fa-calendar-check"></i> Total Bookings</h4>
+                <div class="report-value bookings">${(reports.summary?.totalBookings || 0).toLocaleString()}</div>
+                <div class="report-change">
+                    <i class="fas fa-chart-pie"></i>
+                    Excluding cancelled bookings
+                </div>
+                <div class="report-change">
+                    Period: ${reports.period} days
+                </div>
+            </div>
+            
+            <div class="report-card customers">
+                <h4><i class="fas fa-users"></i> Active Customers</h4>
+                <div class="report-value customers">${reports.topCustomers ? reports.topCustomers.length : 0}</div>
+                <div class="report-change">
+                    <i class="fas fa-user-check"></i>
+                    Customers with successful bookings
+                </div>
+                <div class="report-change">
+                    Top spender: ₹${reports.topCustomers && reports.topCustomers[0] ? reports.topCustomers[0].totalSpent.toLocaleString() : 0}
+                </div>
+            </div>
+            
+            <div class="report-card cancellations">
+                <h4><i class="fas fa-times-circle"></i> Cancellations</h4>
+                <div class="report-value cancellations">${totalCancellations}</div>
+                <div class="report-change">
+                    <i class="fas fa-percentage"></i>
+                    Cancellation rate: ${cancellationRate}%
+                </div>
+                <div class="report-change">
+                    ${reports.summary?.revenueByStatus?.cancelled ? `Lost revenue: ₹${reports.summary.revenueByStatus.cancelled.revenue.toLocaleString()}` : 'No revenue loss'}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    reportsHTML += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">';
+    
+    // Revenue by Car Type
+    if (reports.revenueByCarType && reports.revenueByCarType.length > 0) {
+        const totalRevenue = reports.revenueByCarType.reduce((sum, type) => sum + type.revenue, 0);
+        
+        reportsHTML += `
+            <div class="chart-container">
+                <h4><i class="fas fa-car-side"></i> Revenue by Car Type</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    ${reports.revenueByCarType.map(type => {
+                        const percentage = totalRevenue ? ((type.revenue / totalRevenue) * 100).toFixed(1) : 0;
+                        return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 12px; height: 12px; background: #3b82f6; border-radius: 50%;"></div>
+                                <span style="font-weight: 600; color: #111827;">${type._id}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; color: #111827; font-size: 1.1rem;">₹${type.revenue.toLocaleString()}</div>
+                                <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">
+                                    ${type.bookings} bookings • ${percentage}%
+                                </div>
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+            </div>
+        `;
     }
+    
+    // Popular Cars by Revenue
+    if (reports.popularCars && reports.popularCars.length > 0) {
+        reportsHTML += `
+            <div class="chart-container">
+                <h4><i class="fas fa-trophy"></i> Top Performing Cars</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    ${reports.popularCars.slice(0, 5).map((car, index) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 24px; height: 24px; background: #f59e0b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.7rem;">
+                                    ${index + 1}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #111827; margin-bottom: 0.25rem;">${car.make} ${car.model}</div>
+                                    <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">${car.type} • ${car.bookings} bookings</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; color: #059669; font-size: 1.1rem;">₹${car.revenue.toLocaleString()}</div>
+                                <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">
+                                    ₹${car.bookings ? Math.round(car.revenue / car.bookings).toLocaleString() : 0}/booking
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Top Customers by Spending
+    if (reports.topCustomers && reports.topCustomers.length > 0) {
+        reportsHTML += `
+            <div class="chart-container" style="grid-column: 1 / -1;">
+                <h4><i class="fas fa-crown"></i> Top Customers by Spending</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+                    ${reports.topCustomers.slice(0, 8).map((customer, index) => `
+                        <div style="padding: 1.25rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                        <div style="width: 24px; height: 24px; background: #f59e0b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.7rem;">
+                                            ${index + 1}
+                                        </div>
+                                        <div style="font-weight: 700; color: #111827; font-size: 1.1rem;">${customer.name}</div>
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #374151; font-weight: 500;">${customer.email}</div>
+                                    <div style="font-size: 0.85rem; color: #6b7280;">${customer.phone}</div>
+                                </div>
+                                <div style="background: #3b82f6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                    ${customer.successfulBookings} ${customer.successfulBookings === 1 ? 'booking' : 'bookings'}
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.9rem; color: #374151; font-weight: 500;">Total Spent:</span>
+                                <span style="font-weight: bold; color: #059669; font-size: 1.1rem;">₹${customer.totalSpent.toLocaleString()}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                                <span style="font-size: 0.85rem; color: #6b7280;">Avg per booking:</span>
+                                <span style="font-weight: 600; color: #374151; font-size: 0.9rem;">
+                                    ₹${customer.successfulBookings ? Math.round(customer.totalSpent / customer.successfulBookings).toLocaleString() : 0}
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Booking Trends
+    if (reports.bookingTrends && reports.bookingTrends.length > 0) {
+        const totalTrendBookings = reports.bookingTrends.reduce((sum, trend) => sum + trend.count, 0);
+        const totalTrendRevenue = reports.bookingTrends.reduce((sum, trend) => sum + trend.revenue, 0);
+        
+        reportsHTML += `
+            <div class="chart-container" style="grid-column: 1 / -1;">
+                <h4><i class="fas fa-chart-line"></i> Booking Trends (Last ${reports.period} Days)</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 8px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.9rem; color: #0369a1; font-weight: 600;">Total in Period</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #111827;">${totalTrendBookings} bookings</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.9rem; color: #0369a1; font-weight: 600;">Revenue in Period</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #111827;">₹${totalTrendRevenue.toLocaleString()}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.9rem; color: #0369a1; font-weight: 600;">Daily Average</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #111827;">${Math.round(totalTrendBookings / reports.bookingTrends.length)} bookings</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
+                    ${reports.bookingTrends.slice(-14).map(trend => {
+                        const date = new Date(trend._id);
+                        const isToday = new Date().toDateString() === date.toDateString();
+                        return `
+                        <div style="text-align: center; padding: 1rem; background: ${isToday ? '#dbeafe' : '#f8fafc'}; border-radius: 6px; border: ${isToday ? '2px solid #3b82f6' : '1px solid #e2e8f0'};">
+                            <div style="font-weight: 600; color: #111827; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                ${isToday ? ' ⭐' : ''}
+                            </div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.25rem;">${trend.count}</div>
+                            <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">₹${trend.revenue.toLocaleString()}</div>
+                        </div>
+                    `}).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Cancellation Analysis
+    if (reports.summary?.revenueByStatus) {
+        const statusData = reports.summary.revenueByStatus;
+        const statuses = ['pending', 'confirmed', 'active', 'completed', 'cancelled'];
+        
+        reportsHTML += `
+            <div class="chart-container" style="grid-column: 1 / -1;">
+                <h4><i class="fas fa-chart-pie"></i> Booking Status Distribution</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    ${statuses.map(status => {
+                        const data = statusData[status];
+                        if (!data) return '';
+                        
+                        const statusColors = {
+                            'pending': '#f59e0b',
+                            'confirmed': '#3b82f6', 
+                            'active': '#8b5cf6',
+                            'completed': '#10b981',
+                            'cancelled': '#ef4444'
+                        };
+                        
+                        const statusLabels = {
+                            'pending': 'Pending',
+                            'confirmed': 'Confirmed',
+                            'active': 'Active',
+                            'completed': 'Completed',
+                            'cancelled': 'Cancelled'
+                        };
+                        
+                        return `
+                        <div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid ${statusColors[status]}">
+                            <div style="font-weight: 600; color: #111827; margin-bottom: 0.5rem;">${statusLabels[status]}</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${statusColors[status]}; margin-bottom: 0.25rem;">
+                                ${data.count || 0}
+                            </div>
+                            <div style="font-size: 0.9rem; color: #374151; font-weight: 500;">
+                                ₹${(data.revenue || 0).toLocaleString()}
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    reportsHTML += '</div>';
+    container.innerHTML = reportsHTML;
 }
 
 // Handle add car form submission
@@ -706,7 +1398,7 @@ async function handleAddCarForm(e) {
     };
 
     // Validate required fields
-    if (!carData.make || !carData.model || !carData.type || !carData.fuelType || !carData.transmission) {
+    if (!carData.make || !carData.model || !carData.type) {
         showNotification('Please fill all required fields', 'error');
         return;
     }
@@ -726,8 +1418,8 @@ async function handleAddCarForm(e) {
 
         if (result.success) {
             showNotification('Car added successfully!', 'success');
-            resetCarForm();
-            loadAllCars(); // Refresh cars list
+            document.getElementById('addCarForm').reset();
+            loadAllCars();
             console.log('✅ Car added successfully');
         } else {
             throw new Error(result.message);
@@ -738,145 +1430,379 @@ async function handleAddCarForm(e) {
     }
 }
 
-// Reset car form
-function resetCarForm() {
-    document.getElementById('addCarForm').reset();
-    document.getElementById('carYear').value = 2024;
-    document.getElementById('carSeats').value = 5;
-}
-
-// Load reports
-async function loadReports() {
+// Enhanced Car Editing Functions
+async function editCar(carId) {
     try {
-        console.log('📈 Loading reports...');
-        showLoading('reportsContent', 'Generating reports...');
+        console.log(`✏️ Editing car: ${carId}`);
         
-        const period = document.getElementById('reportPeriod')?.value || '30';
-        
-        const response = await mobileFetch(`${API_BASE}/admin/reports?period=${period}`);
+        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}`);
         const result = await response.json();
         
-        console.log('📈 Reports API Response:', result);
-        
         if (result.success) {
-            displayReports(result.reports);
-            console.log('✅ Reports loaded successfully');
+            displayCarEditForm(result.car);
         } else {
-            throw new Error(result.message || 'Failed to load reports');
+            throw new Error(result.message);
         }
     } catch (error) {
-        console.error('❌ Error loading reports:', error);
-        showNotification('Error loading reports: ' + error.message, 'error');
+        console.error('❌ Error loading car for editing:', error);
+        showNotification('Error loading car details: ' + error.message, 'error');
     }
 }
 
-// Display reports with dark text colors
-function displayReports(reports) {
-    const container = document.getElementById('reportsContent');
+function displayCarEditForm(car) {
+    const modal = document.getElementById('carEditModal') || createCarEditModal();
     
-    if (!reports) {
-        container.innerHTML = `
-            <div class="no-data">
-                <i class="fas fa-chart-bar"></i>
-                <h3>No Report Data</h3>
-                <p>Unable to generate reports at this time.</p>
+    document.getElementById('editCarId').value = car._id;
+    document.getElementById('editCarMake').value = car.make || '';
+    document.getElementById('editCarModel').value = car.model || '';
+    document.getElementById('editCarYear').value = car.year || 2024;
+    document.getElementById('editCarType').value = car.type || '';
+    document.getElementById('editCarSeats').value = car.seats || 5;
+    document.getElementById('editCarFuelType').value = car.fuelType || '';
+    document.getElementById('editCarTransmission').value = car.transmission || '';
+    document.getElementById('editCarPricePerDay').value = car.pricePerDay || '';
+    document.getElementById('editCarPricePerHour').value = car.pricePerHour || '';
+    document.getElementById('editCarColor').value = car.color || '';
+    document.getElementById('editCarMileage').value = car.mileage || '';
+    document.getElementById('editCarFeatures').value = car.features ? car.features.join(', ') : '';
+    document.getElementById('editCarImageUrl').value = car.images && car.images.length > 0 ? car.images[0].url : '';
+    document.getElementById('editCarRegistration').value = car.registrationNumber || '';
+    document.getElementById('editCarAvailable').checked = car.available !== false;
+    
+    // Update preview
+    updateCarImagePreview(car.images && car.images.length > 0 ? car.images[0].url : '');
+    
+    modal.style.display = 'block';
+}
+
+function createCarEditModal() {
+    const modal = document.createElement('div');
+    modal.id = 'carEditModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Car</h3>
+                <span class="close" onclick="closeModal('carEditModal')">&times;</span>
             </div>
+            <div class="modal-body">
+                <form id="editCarForm">
+                    <input type="hidden" id="editCarId">
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-car"></i> Car Information</h4>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="editCarMake">Company/Make *</label>
+                                <input type="text" id="editCarMake" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCarModel">Model *</label>
+                                <input type="text" id="editCarModel" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label for="editCarYear">Year *</label>
+                                <input type="number" id="editCarYear" required min="2010" max="2024">
+                            </div>
+                            <div class="form-group">
+                                <label for="editCarType">Type *</label>
+                                <select id="editCarType" required>
+                                    <option value="">Select Type</option>
+                                    <option value="SUV">SUV</option>
+                                    <option value="Sedan">Sedan</option>
+                                    <option value="Hatchback">Hatchback</option>
+                                    <option value="MPV">MPV</option>
+                                    <option value="Luxury">Luxury</option>
+                                    <option value="Sports">Sports</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCarSeats">Seats *</label>
+                                <input type="number" id="editCarSeats" required min="2" max="9">
+                            </div>
+                        </div>
+                        
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="editCarFuelType">Fuel Type *</label>
+                                <select id="editCarFuelType" required>
+                                    <option value="">Select Fuel Type</option>
+                                    <option value="Petrol">Petrol</option>
+                                    <option value="Diesel">Diesel</option>
+                                    <option value="Electric">Electric</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCarTransmission">Transmission *</label>
+                                <select id="editCarTransmission" required>
+                                    <option value="">Select Transmission</option>
+                                    <option value="Manual">Manual</option>
+                                    <option value="Automatic">Automatic</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-rupee-sign"></i> Pricing</h4>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="editCarPricePerDay">Price Per Day (₹) *</label>
+                                <input type="number" id="editCarPricePerDay" required min="500" step="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="editCarPricePerHour">Price Per Hour (₹) *</label>
+                                <input type="number" id="editCarPricePerHour" required min="50" step="50">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-palette"></i> Appearance & Details</h4>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="editCarColor">Color</label>
+                                <input type="text" id="editCarColor" placeholder="e.g., Red, White">
+                            </div>
+                            <div class="form-group">
+                                <label for="editCarMileage">Mileage</label>
+                                <input type="text" id="editCarMileage" placeholder="e.g., 15 kmpl">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editCarFeatures">Features (comma separated)</label>
+                            <input type="text" id="editCarFeatures" placeholder="e.g., AC, Music System, Sunroof">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editCarRegistration">Registration Number</label>
+                            <input type="text" id="editCarRegistration" placeholder="e.g., TS09AB1234">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editCarAvailable" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="editCarAvailable" checked>
+                                Available for booking
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-image"></i> Car Image</h4>
+                        <div class="form-group">
+                            <label for="editCarImageUrl">Image URL *</label>
+                            <input type="url" id="editCarImageUrl" required 
+                                   oninput="updateCarImagePreview(this.value)"
+                                   placeholder="https://example.com/car-image.jpg">
+                            <small style="color: #64748b; font-size: 0.8rem;">Provide a direct image URL</small>
+                        </div>
+                        
+                        <div id="carImagePreviewContainer" style="text-align: center; margin: 1rem 0;">
+                            <img id="carImagePreview" src="" alt="Car Preview" 
+                                 style="max-width: 300px; max-height: 200px; border-radius: 8px; display: none;">
+                            <div id="carImagePreviewPlaceholder" style="color: #64748b; font-style: italic;">
+                                Image preview will appear here
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('carEditModal')">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add form submission handler
+    document.getElementById('editCarForm').addEventListener('submit', handleEditCarForm);
+    
+    return modal;
+}
+
+// Update car image preview
+function updateCarImagePreview(imageUrl) {
+    const preview = document.getElementById('carImagePreview');
+    const placeholder = document.getElementById('carImagePreviewPlaceholder');
+    
+    if (imageUrl && imageUrl.startsWith('http')) {
+        preview.src = imageUrl;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        
+        // Handle image loading errors
+        preview.onerror = function() {
+            this.style.display = 'none';
+            placeholder.style.display = 'block';
+            placeholder.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Failed to load image. Please check the URL.</p>
+            `;
+        };
+        
+        // Handle image loading success
+        preview.onload = function() {
+            this.style.display = 'block';
+            placeholder.style.display = 'none';
+        };
+    } else {
+        preview.style.display = 'none';
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = `
+            <i class="fas fa-car"></i>
+            <p>Car preview will appear here</p>
         `;
+    }
+}
+
+async function handleEditCarForm(e) {
+    e.preventDefault();
+    
+    const carData = {
+        make: document.getElementById('editCarMake').value.trim(),
+        model: document.getElementById('editCarModel').value.trim(),
+        year: parseInt(document.getElementById('editCarYear').value),
+        type: document.getElementById('editCarType').value,
+        seats: parseInt(document.getElementById('editCarSeats').value),
+        fuelType: document.getElementById('editCarFuelType').value,
+        transmission: document.getElementById('editCarTransmission').value,
+        pricePerDay: parseInt(document.getElementById('editCarPricePerDay').value),
+        pricePerHour: parseInt(document.getElementById('editCarPricePerHour').value),
+        color: document.getElementById('editCarColor').value.trim(),
+        mileage: document.getElementById('editCarMileage').value.trim(),
+        features: document.getElementById('editCarFeatures').value.split(',').map(f => f.trim()).filter(f => f),
+        images: [{ 
+            url: document.getElementById('editCarImageUrl').value.trim(),
+            alt: `${document.getElementById('editCarMake').value.trim()} ${document.getElementById('editCarModel').value.trim()}`
+        }],
+        registrationNumber: document.getElementById('editCarRegistration').value.trim(),
+        available: document.getElementById('editCarAvailable').checked
+    };
+
+    const carId = document.getElementById('editCarId').value;
+
+    // Validate required fields
+    if (!carData.make || !carData.model || !carData.type) {
+        showNotification('Please fill all required fields', 'error');
         return;
     }
-    
-    let reportsHTML = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">';
-    
-    // Revenue by Car Type
-    if (reports.revenueByCarType && reports.revenueByCarType.length > 0) {
-        reportsHTML += `
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <h4 style="margin: 0 0 1rem 0; color: #111827; font-weight: 600;">Revenue by Car Type</h4>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    ${reports.revenueByCarType.map(type => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                            <span style="font-weight: 600; color: #111827;">${type._id}</span>
-                            <div style="text-align: right;">
-                                <div style="font-weight: bold; color: #111827; font-size: 1.1rem;">₹${type.revenue.toLocaleString()}</div>
-                                <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">${type.bookings} bookings</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    // Popular Cars
-    if (reports.popularCars && reports.popularCars.length > 0) {
-        reportsHTML += `
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <h4 style="margin: 0 0 1rem 0; color: #111827; font-weight: 600;">Popular Cars</h4>
-                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    ${reports.popularCars.slice(0, 5).map(car => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 6px;">
-                            <div>
-                                <div style="font-weight: 600; color: #111827; margin-bottom: 0.25rem;">${car._id.make} ${car._id.model}</div>
-                                <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">${car.bookings} bookings</div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-weight: bold; color: #059669; font-size: 1.1rem;">₹${car.revenue.toLocaleString()}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    // Top Customers - ENHANCED WITH DARK TEXT COLORS
-    if (reports.topCustomers && reports.topCustomers.length > 0) {
-        reportsHTML += `
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
-                <h4 style="margin: 0 0 1rem 0; color: #111827; font-weight: 600;">Top Customers</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                    ${reports.topCustomers.slice(0, 6).map(customer => `
-                        <div style="padding: 1.25rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                                <div>
-                                    <div style="font-weight: 700; color: #111827; font-size: 1.1rem; margin-bottom: 0.25rem;">${customer.name}</div>
-                                    <div style="font-size: 0.9rem; color: #374151; font-weight: 500;">${customer.email}</div>
-                                </div>
-                                <div style="background: #3b82f6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                                    ${customer.bookings} ${customer.bookings === 1 ? 'booking' : 'bookings'}
-                                </div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.9rem; color: #374151; font-weight: 500;">Total Spent:</span>
-                                <span style="font-weight: bold; color: #059669; font-size: 1.1rem;">₹${customer.totalSpent.toLocaleString()}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
+
+    if (carData.pricePerDay <= 0 || carData.pricePerHour <= 0) {
+        showNotification('Price must be greater than 0', 'error');
+        return;
     }
 
-    // Booking Trends
-    if (reports.bookingTrends && reports.bookingTrends.length > 0) {
-        reportsHTML += `
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: 1 / -1;">
-                <h4 style="margin: 0 0 1rem 0; color: #111827; font-weight: 600;">Booking Trends (Last ${reports.period} Days)</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    ${reports.bookingTrends.slice(-7).map(trend => `
-                        <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 6px;">
-                            <div style="font-weight: 600; color: #111827; margin-bottom: 0.5rem;">${new Date(trend._id).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.25rem;">${trend.count}</div>
-                            <div style="font-size: 0.85rem; color: #374151; font-weight: 500;">₹${trend.revenue.toLocaleString()}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}`, {
+            method: 'PUT',
+            body: JSON.stringify(carData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Car updated successfully!', 'success');
+            closeModal('carEditModal');
+            loadAllCars(); // Refresh cars list
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error updating car:', error);
+        showNotification('Error: ' + error.message, 'error');
     }
-    
-    reportsHTML += '</div>';
-    container.innerHTML = reportsHTML;
+}
+
+// Toggle car availability
+async function toggleCarAvailability(carId, makeAvailable) {
+    if (!confirm(`Are you sure you want to make this car ${makeAvailable ? 'available' : 'unavailable'}?`)) {
+        return;
+    }
+
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}/availability`, {
+            method: 'PUT',
+            body: JSON.stringify({ available: makeAvailable })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`Car ${makeAvailable ? 'made available' : 'made unavailable'} successfully!`, 'success');
+            loadAllCars();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error toggling car availability:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Remove car completely
+async function removeCar(carId) {
+    if (!confirm('Are you sure you want to remove this car? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/cars/${carId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Car removed successfully!', 'success');
+            loadAllCars();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error removing car:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Demote admin to regular user
+async function demoteAdmin(userId, userName) {
+    if (!confirm(`Are you sure you want to demote "${userName}" from admin to regular user?`)) {
+        return;
+    }
+
+    try {
+        console.log(`👤 Demoting admin ${userId} to user...`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/users/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ role: 'user' })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`"${userName}" has been demoted to regular user successfully!`, 'success');
+            loadAdmins();
+            loadCustomers();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error demoting admin:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
 }
 
 // Show booking details
@@ -889,8 +1815,6 @@ async function showBookingDetails(bookingId) {
         
         if (result.success) {
             displayBookingDetails(result.booking);
-            document.getElementById('bookingDetailsModal').style.display = 'block';
-            console.log('✅ Booking details loaded successfully');
         } else {
             throw new Error(result.message || 'Failed to load booking details');
         }
@@ -922,6 +1846,10 @@ function displayBookingDetails(booking) {
                     <div style="display: flex; justify-content: space-between;">
                         <span style="font-weight: 600; color: #475569;">Phone:</span>
                         <span>${booking.user?.phone || 'N/A'}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 600; color: #475569;">Address:</span>
+                        <span style="text-align: right;">${booking.user?.address ? `${booking.user.address.street || ''}, ${booking.user.address.city || ''}, ${booking.user.address.state || ''}` : 'N/A'}</span>
                     </div>
                 </div>
             </div>
@@ -1003,6 +1931,8 @@ function displayBookingDetails(booking) {
             </div>
         </div>
     `;
+    
+    document.getElementById('bookingDetailsModal').style.display = 'block';
 }
 
 // Update booking status
@@ -1024,7 +1954,6 @@ async function updateBookingStatus(bookingId, status) {
         if (result.success) {
             showNotification(`Booking status updated to ${status} successfully!`, 'success');
             loadAllBookings();
-            console.log('✅ Booking status updated successfully');
         } else {
             throw new Error(result.message);
         }
@@ -1095,6 +2024,20 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
+// Clear all filters and reload
+function clearFilters() {
+    console.log('🔄 Clearing all filters...');
+    
+    const statusFilter = document.getElementById('statusFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    
+    if (statusFilter) statusFilter.value = 'all';
+    if (dateFilter) dateFilter.value = 'all';
+    
+    loadAllBookings();
+    showNotification('Filters cleared successfully', 'success');
+}
+
 // Logout function
 function logout() {
     localStorage.removeItem('token');
@@ -1113,6 +2056,101 @@ document.head.insertAdjacentHTML('beforeend', `
             to {
                 transform: translateX(0);
                 opacity: 1;
+            }
+        }
+        
+        /* Edit Car Button */
+        .btn-edit-car {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s ease;
+            flex: 1;
+        }
+
+        .btn-edit-car:hover {
+            background: #d97706;
+        }
+
+        /* Car Actions Layout */
+        .car-actions-admin {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .car-actions-admin button {
+            flex: 1;
+            min-width: 80px;
+        }
+
+        /* Modal Styles */
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-section h4 {
+            margin: 0 0 1rem 0;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Form Grid Layouts */
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid-2,
+            .form-grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .car-actions-admin {
+                flex-direction: column;
+            }
+            
+            .car-actions-admin button {
+                min-width: auto;
             }
         }
     </style>

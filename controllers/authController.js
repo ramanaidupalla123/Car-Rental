@@ -1,7 +1,8 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-// Register user - IMPROVED VERSION
+// Register user
 exports.register = async (req, res) => {
   try {
     const { name, email, password, phone, address } = req.body;
@@ -60,7 +61,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login user - IMPROVED VERSION
+// Login user - COMPLETE FIXED VERSION
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -87,6 +88,17 @@ exports.login = async (req, res) => {
 
     console.log('✅ User found:', user.email, 'Role:', user.role);
 
+    // PERMANENT ADMIN CHECK - Set ramanaidupalla359@gmail.com as permanent admin
+    const permanentAdminEmail = 'ramanaidupalla359@gmail.com';
+    if (email.toLowerCase() === permanentAdminEmail.toLowerCase()) {
+      console.log('👑 Permanent admin detected:', email);
+      if (user.role !== 'admin') {
+        user.role = 'admin';
+        await user.save();
+        console.log('🔄 Updated role to admin for permanent admin');
+      }
+    }
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
@@ -99,7 +111,7 @@ exports.login = async (req, res) => {
 
     console.log('✅ Password valid for:', email);
 
-    // Double-check admin role for fixed admin emails
+    // Additional admin check for specific emails
     const adminEmails = [
       'ramanaidupalla359@gmail.com',
       'nleelasairamnakka@gmail.com'
