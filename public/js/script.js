@@ -134,10 +134,22 @@ function setupEventListeners() {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const bookingForm = document.getElementById('bookingForm');
+    const profileForm = document.getElementById('profileForm');
+    const passwordForm = document.getElementById('passwordForm');
     
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     if (registerForm) registerForm.addEventListener('submit', handleRegister);
     if (bookingForm) bookingForm.addEventListener('submit', handleBooking);
+    if (profileForm) profileForm.addEventListener('submit', handleProfileUpdate);
+    if (passwordForm) passwordForm.addEventListener('submit', handlePasswordChange);
+    
+    // Settings tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tab = this.getAttribute('data-tab');
+            switchSettingsTab(tab);
+        });
+    });
     
     // Form interactions
     const rentalType = document.getElementById('rentalType');
@@ -187,6 +199,153 @@ function setupEventListeners() {
             }
         });
     });
+}
+
+// Settings Tab Switching
+function switchSettingsTab(tabName) {
+    // Update active tab button
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-tab') === tabName) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update active tab content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.id === tabName + 'Tab') {
+            tab.classList.add('active');
+        }
+    });
+}
+
+// Show settings modal
+function showSettings() {
+    if (!currentUser) {
+        showNotification('Please login to access settings', 'warning');
+        return;
+    }
+    
+    console.log('⚙️ Opening settings modal...');
+    closeAllModals();
+    
+    // Populate profile form with current user data
+    document.getElementById('profileName').value = currentUser.name;
+    document.getElementById('profileEmail').value = currentUser.email;
+    document.getElementById('profilePhone').value = currentUser.phone || '';
+    document.getElementById('profileAddress').value = currentUser.address || '';
+    
+    // Reset password form
+    document.getElementById('passwordForm').reset();
+    
+    // Switch to profile tab by default
+    switchSettingsTab('profile');
+    
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal) {
+        settingsModal.style.display = 'block';
+    }
+}
+
+// Handle profile update
+async function handleProfileUpdate(e) {
+    e.preventDefault();
+    
+    const profileData = {
+        name: document.getElementById('profileName').value,
+        phone: document.getElementById('profilePhone').value,
+        address: document.getElementById('profileAddress').value
+    };
+
+    if (!profileData.name || !profileData.phone) {
+        showNotification('Please fill all required fields', 'error');
+        return;
+    }
+
+    try {
+        showLoading('settingsModal', 'Updating profile...');
+        
+        const response = await mobileFetch(`${API_BASE}/users/profile`, {
+            method: 'PUT',
+            body: JSON.stringify(profileData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Update local user data
+            currentUser.name = profileData.name;
+            currentUser.phone = profileData.phone;
+            currentUser.address = profileData.address;
+            
+            // Update localStorage
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            
+            // Update UI
+            updateUI();
+            
+            showNotification('✅ Profile updated successfully!', 'success');
+            document.getElementById('settingsModal').style.display = 'none';
+        } else {
+            throw new Error(result.message || 'Profile update failed');
+        }
+    } catch (error) {
+        console.error('❌ Profile update error:', error);
+        showNotification('Error updating profile: ' + error.message, 'error');
+    }
+}
+
+// Handle password change
+async function handlePasswordChange(e) {
+    e.preventDefault();
+    
+    const passwordData = {
+        currentPassword: document.getElementById('currentPassword').value,
+        newPassword: document.getElementById('newPassword').value,
+        confirmPassword: document.getElementById('confirmPassword').value
+    };
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+        showNotification('Please fill all password fields', 'error');
+        return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+        showNotification('New password must be at least 6 characters long', 'error');
+        return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+        showNotification('New passwords do not match', 'error');
+        return;
+    }
+
+    try {
+        showLoading('settingsModal', 'Changing password...');
+        
+        const response = await mobileFetch(`${API_BASE}/users/change-password`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                currentPassword: passwordData.currentPassword,
+                newPassword: passwordData.newPassword
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('✅ Password changed successfully!', 'success');
+            document.getElementById('passwordForm').reset();
+            document.getElementById('settingsModal').style.display = 'none';
+        } else {
+            throw new Error(result.message || 'Password change failed');
+        }
+    } catch (error) {
+        console.error('❌ Password change error:', error);
+        showNotification('Error changing password: ' + error.message, 'error');
+    }
 }
 
 // Mobile Navigation Functions
@@ -305,11 +464,6 @@ async function loadCars() {
         
         const result = await response.json();
         console.log('✅ Cars API response received');
-        // In loadCars() function, after cars are loaded:
-console.log('🔍 All loaded cars:');
-cars.forEach((car, index) => {
-    console.log(`${index + 1}. ${car.make} ${car.model} (ID: ${car._id})`);
-});
         
         if (result.success && result.cars) {
             cars = result.cars;
@@ -1009,22 +1163,31 @@ function updateUI() {
         existingMobileAdminLink.remove();
     }
 
+    // Remove existing settings button if any
+    const existingSettingsBtn = document.querySelector('.settings-btn');
+    if (existingSettingsBtn) {
+        existingSettingsBtn.remove();
+    }
+
     if (currentUser) {
         // User is logged in
         console.log('👤 User logged in:', currentUser.name, 'Role:', currentUser.role);
         
-       // In the updateUI function, update the user display creation:
-const userDisplay = document.createElement('div');
-userDisplay.className = 'user-display';
-userDisplay.innerHTML = `
-    <span title="${currentUser.name}${currentUser.role === 'admin' ? ' (Admin)' : ''}">
-        <i class="fas fa-user"></i> ${currentUser.name}
-        ${currentUser.role === 'admin' ? ' 👑' : ''}
-    </span>
-    <button class="btn btn-secondary btn-small" onclick="logout()" style="flex-shrink: 0;">
-        <i class="fas fa-sign-out-alt"></i> Logout
-    </button>
-`;
+        // Create user display with settings button
+        const userDisplay = document.createElement('div');
+        userDisplay.className = 'user-display';
+        userDisplay.innerHTML = `
+            <span title="${currentUser.name}${currentUser.role === 'admin' ? ' (Admin)' : ''}">
+                <i class="fas fa-user"></i> ${currentUser.name}
+                ${currentUser.role === 'admin' ? ' 👑' : ''}
+            </span>
+            <button class="settings-btn" onclick="showSettings()" title="Account Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button class="btn btn-secondary btn-small" onclick="logout()" style="flex-shrink: 0;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        `;
         
         // Replace desktop auth buttons with user display
         if (authButtons) {
@@ -1039,6 +1202,9 @@ userDisplay.innerHTML = `
                     <i class="fas fa-user"></i> Welcome, ${currentUser.name}
                     ${currentUser.role === 'admin' ? ' 👑' : ''}
                 </div>
+                <button class="btn btn-primary btn-full" onclick="showSettings(); closeMobileMenu();">
+                    <i class="fas fa-cog"></i> Account Settings
+                </button>
                 <button class="btn btn-secondary btn-full" onclick="logout(); closeMobileMenu();">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>

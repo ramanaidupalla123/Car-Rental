@@ -2378,3 +2378,557 @@ html, body {
     color: #000000 !important;
     border-color: #e2e8f0 !important;
 }
+
+/* ===== SETTINGS MODAL ENHANCED STYLES ===== */
+
+/* Settings Modal */
+#settingsModal .modal-content {
+    max-width: 500px; /* Reduced width */
+    background: var(--light-navy);
+    border: 1px solid var(--green);
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+#settingsModal .form-title {
+    text-align: center;
+    margin-bottom: 1rem; /* Reduced margin */
+    color: var(--green);
+    font-size: 1.6rem; /* Slightly smaller */
+    padding: 1.5rem 1.5rem 0.5rem; /* Reduced padding */
+    position: relative;
+}
+
+#settingsModal .form-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px; /* Smaller */
+    height: 2px; /* Thinner */
+    background: var(--green);
+    border-radius: 2px;
+}
+
+/* Settings Tabs */
+.settings-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--lightest-navy);
+    margin: 0 1.5rem; /* Reduced margin */
+    background: var(--navy-blue);
+    border-radius: 8px 8px 0 0; /* Smaller radius */
+    overflow: hidden;
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 1rem 1.2rem; /* Reduced padding */
+    color: var(--slate);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 0.9rem; /* Smaller font */
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem; /* Reduced gap */
+}
+
+.tab-btn::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px; /* Thinner */
+    background: var(--green);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.tab-btn.active {
+    color: var(--green);
+    background: var(--light-navy);
+}
+
+.tab-btn.active::before {
+    transform: scaleX(1);
+}
+
+.tab-btn:hover:not(.active) {
+    color: var(--lightest-slate);
+    background: rgba(100, 255, 218, 0.1);
+}
+
+.tab-btn i {
+    font-size: 1rem; /* Smaller icons */
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 1.5rem; /* Reduced padding */
+    animation: fadeInUp 0.4s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(15px); /* Smaller movement */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Form Sections in Settings */
+#settingsModal .form-section {
+    background: var(--navy-blue);
+    padding: 1.5rem; /* Reduced padding */
+    border-radius: 10px; /* Smaller radius */
+    border: 1px solid var(--lightest-navy);
+    margin-bottom: 1rem; /* Reduced margin */
+    position: relative;
+    overflow: hidden;
+}
+
+#settingsModal .form-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px; /* Thinner */
+    height: 100%;
+    background: linear-gradient(135deg, var(--green), var(--light-green));
+}
+
+#settingsModal .form-section h4 {
+    color: var(--green);
+    margin-bottom: 1rem; /* Reduced margin */
+    font-size: 1.1rem; /* Smaller font */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* Reduced gap */
+    font-weight: 600;
+}
+
+#settingsModal .form-section h4 i {
+    color: var(--green);
+    font-size: 1rem; /* Smaller icons */
+}
+
+/* Form Grid in Settings */
+#settingsModal .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem; /* Reduced gap */
+    margin-bottom: 0;
+}
+
+/* Form Groups in Settings - SMALLER FIELDS */
+#settingsModal .form-group {
+    margin-bottom: 1rem; /* Reduced margin */
+    position: relative;
+}
+
+#settingsModal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+#settingsModal .form-group label {
+    display: block;
+    margin-bottom: 0.5rem; /* Reduced margin */
+    color: var(--lightest-slate);
+    font-weight: 600;
+    font-size: 0.9rem; /* Smaller font */
+    display: flex;
+    align-items: center;
+    gap: 0.4rem; /* Reduced gap */
+}
+
+#settingsModal .form-group label i {
+    color: var(--green);
+    font-size: 0.85rem; /* Smaller icons */
+    width: 14px; /* Smaller width */
+}
+
+/* SMALLER INPUT FIELDS */
+#settingsModal .form-group input {
+    width: 100%;
+    padding: 0.8rem 1rem; /* Reduced padding - much smaller */
+    background: var(--light-navy);
+    border: 1.5px solid var(--lightest-navy); /* Thinner border */
+    border-radius: 6px; /* Smaller radius */
+    color: var(--lightest-slate);
+    -webkit-text-fill-color: var(--lightest-slate);
+    font-size: 0.9rem; /* Smaller font */
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    height: 45px; /* Fixed smaller height */
+}
+
+#settingsModal .form-group input:focus {
+    outline: none;
+    border-color: var(--green);
+    background: var(--lightest-navy);
+    box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1); /* Smaller shadow */
+    transform: translateY(-1px); /* Smaller movement */
+}
+
+#settingsModal .form-group input:read-only {
+    background: var(--lightest-navy);
+    color: var(--slate);
+    border-color: var(--lightest-navy);
+    cursor: not-allowed;
+}
+
+#settingsModal .form-group input:read-only:focus {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Password Help Text */
+#settingsModal .form-group small {
+    color: var(--slate);
+    font-size: 0.75rem; /* Smaller font */
+    margin-top: 0.3rem; /* Reduced margin */
+    display: block;
+    line-height: 1.3; /* Tighter line height */
+    font-style: italic;
+}
+
+/* Buttons in Settings */
+#settingsModal .btn-primary {
+    background: linear-gradient(135deg, var(--green), var(--light-green));
+    color: var(--navy-blue);
+    border: none;
+    padding: 1rem 1.5rem; /* Reduced padding */
+    border-radius: 6px; /* Smaller radius */
+    font-weight: 600;
+    font-size: 0.9rem; /* Smaller font */
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* Reduced gap */
+    width: 100%;
+    margin-top: 0.5rem; /* Reduced margin */
+    height: 48px; /* Fixed smaller height */
+}
+
+#settingsModal .btn-primary:hover {
+    transform: translateY(-2px); /* Smaller movement */
+    box-shadow: 0 8px 20px rgba(100, 255, 218, 0.3); /* Smaller shadow */
+    background: linear-gradient(135deg, var(--light-green), var(--green));
+}
+
+#settingsModal .btn-primary:active {
+    transform: translateY(0);
+}
+
+/* SETTINGS BUTTON - SYMBOL ABOVE USER NAME */
+.user-display {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-shrink: 0;
+    min-width: 0;
+    padding: 0.5rem 0;
+    position: relative;
+}
+
+.settings-btn {
+    background: transparent;
+    color: var(--green);
+    border: 1.5px solid var(--green); /* Thinner border */
+    border-radius: 6px; /* Smaller radius */
+    padding: 0.5rem; /* Reduced padding */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px; /* Smaller */
+    min-height: 38px; /* Smaller */
+    position: relative;
+    overflow: hidden;
+    order: -1; /* Move to left */
+    margin-right: 0.3rem; /* Reduced margin */
+}
+
+.settings-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--green);
+    transition: left 0.3s ease;
+    z-index: 1;
+}
+
+.settings-btn:hover {
+    color: var(--navy-blue);
+    transform: rotate(90deg) scale(1.1); /* Added scale effect */
+}
+
+.settings-btn:hover::before {
+    left: 0;
+}
+
+.settings-btn i {
+    position: relative;
+    z-index: 2;
+    transition: color 0.3s ease;
+    font-size: 1rem; /* Smaller icon */
+}
+
+.settings-btn:hover i {
+    color: var(--navy-blue);
+}
+
+/* User info styling */
+.user-display span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    font-size: 0.9rem; /* Smaller font */
+    color: var(--green);
+    font-weight: 600;
+    order: 1; /* User name comes after settings button */
+}
+
+/* Logout button styling */
+.user-display .btn-secondary {
+    padding: 0.5rem 0.8rem; /* Smaller padding */
+    font-size: 0.8rem; /* Smaller font */
+    min-height: 38px; /* Smaller height */
+    order: 2; /* Logout button last */
+}
+
+/* Success States */
+#settingsModal .form-group.success input {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); /* Smaller shadow */
+}
+
+#settingsModal .form-group.error input {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1); /* Smaller shadow */
+}
+
+/* Loading State for Settings */
+#settingsModal .loading {
+    text-align: center;
+    padding: 1.5rem; /* Reduced padding */
+    color: var(--slate);
+}
+
+#settingsModal .loading i {
+    font-size: 1.5rem; /* Smaller icon */
+    margin-bottom: 0.8rem; /* Reduced margin */
+    color: var(--green);
+}
+
+/* Responsive Design for Settings */
+@media (max-width: 768px) {
+    #settingsModal .modal-content {
+        margin: 15px 8px; /* Reduced margin */
+        max-width: calc(100% - 16px);
+    }
+    
+    #settingsModal .form-title {
+        padding: 1.2rem 0.8rem 0.5rem; /* Reduced padding */
+        font-size: 1.4rem; /* Smaller font */
+    }
+    
+    .settings-tabs {
+        margin: 0 0.8rem; /* Reduced margin */
+        flex-direction: column;
+    }
+    
+    .tab-btn {
+        padding: 0.8rem; /* Reduced padding */
+        text-align: center;
+        border-bottom: 1px solid var(--lightest-navy);
+    }
+    
+    .tab-btn::before {
+        width: 2px; /* Thinner */
+        height: 100%;
+        bottom: auto;
+        left: 0;
+        transform: scaleY(0);
+    }
+    
+    .tab-btn.active::before {
+        transform: scaleY(1);
+    }
+    
+    .tab-content {
+        padding: 1.2rem 0.8rem; /* Reduced padding */
+    }
+    
+    #settingsModal .form-section {
+        padding: 1.2rem; /* Reduced padding */
+    }
+    
+    #settingsModal .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.8rem; /* Reduced gap */
+    }
+    
+    #settingsModal .form-group input {
+        padding: 0.7rem 0.9rem; /* Even smaller padding */
+        height: 42px; /* Smaller height */
+    }
+    
+    #settingsModal .btn-primary {
+        padding: 0.9rem 1.2rem; /* Reduced padding */
+        height: 45px; /* Smaller height */
+    }
+    
+    /* User Display on Mobile */
+    .user-display {
+        flex-wrap: wrap;
+        gap: 0.4rem; /* Reduced gap */
+        justify-content: flex-end;
+    }
+    
+    .settings-btn {
+        order: -1;
+        margin-right: 0.3rem; /* Reduced margin */
+        min-width: 36px; /* Smaller */
+        min-height: 36px; /* Smaller */
+    }
+    
+    .user-display span {
+        max-width: 120px; /* Smaller max width */
+        font-size: 0.85rem; /* Smaller font */
+    }
+}
+
+@media (max-width: 480px) {
+    #settingsModal .form-title {
+        font-size: 1.2rem; /* Smaller font */
+        padding: 1rem 0.5rem 0.3rem; /* Reduced padding */
+    }
+    
+    .tab-content {
+        padding: 1rem 0.5rem; /* Reduced padding */
+    }
+    
+    #settingsModal .form-section {
+        padding: 1rem; /* Reduced padding */
+    }
+    
+    #settingsModal .form-section h4 {
+        font-size: 1rem; /* Smaller font */
+    }
+    
+    #settingsModal .btn-primary {
+        padding: 0.8rem 1rem; /* Reduced padding */
+        font-size: 0.85rem; /* Smaller font */
+        height: 42px; /* Smaller height */
+    }
+    
+    #settingsModal .form-group input {
+        padding: 0.6rem 0.8rem; /* Even smaller padding */
+        height: 40px; /* Smaller height */
+        font-size: 0.85rem; /* Smaller font */
+    }
+}
+
+/* Animation for tab switching */
+.tab-content {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+}
+
+.tab-content.active {
+    animation-name: fadeInUp;
+}
+
+/* Enhanced focus states for accessibility */
+#settingsModal .form-group input:focus-visible {
+    outline: 1.5px solid var(--green); /* Thinner outline */
+    outline-offset: 1px; /* Smaller offset */
+}
+
+/* Password strength indicator */
+.password-strength {
+    margin-top: 0.3rem; /* Reduced margin */
+    height: 3px; /* Thinner */
+    border-radius: 1.5px; /* Smaller radius */
+    background: var(--lightest-navy);
+    overflow: hidden;
+    position: relative;
+}
+
+.password-strength::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background: var(--green);
+    transition: width 0.3s ease;
+}
+
+.password-strength.weak::after {
+    width: 33%;
+    background: #ef4444;
+}
+
+.password-strength.medium::after {
+    width: 66%;
+    background: #f59e0b;
+}
+
+.password-strength.strong::after {
+    width: 100%;
+    background: #10b981;
+}
+
+/* Custom scrollbar for settings modal */
+#settingsModal .modal-content::-webkit-scrollbar {
+    width: 4px; /* Thinner scrollbar */
+}
+
+#settingsModal .modal-content::-webkit-scrollbar-track {
+    background: var(--navy-blue);
+    border-radius: 2px; /* Smaller radius */
+}
+
+#settingsModal .modal-content::-webkit-scrollbar-thumb {
+    background: var(--green);
+    border-radius: 2px; /* Smaller radius */
+}
+
+#settingsModal .modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--light-green);
+}
+
+
+#settingsModal .form-group input {
+    color: var(--lightest-slate) !important;
+}
+
+#settingsModal .form-group input::placeholder {
+    color: var(--slate) !important;
+}
+
+
+

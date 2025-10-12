@@ -30,7 +30,7 @@ exports.getUsers = async (req, res) => {
 
     const users = await User.find(filter)
       .select('-password')
-      .sort({ createdAt: -1 })
+      .sort({ avgRating: -1, createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
@@ -250,7 +250,7 @@ exports.changePassword = async (req, res) => {
     const user = await User.findById(req.user.id).select('+password');
 
     // Check current password
-    const isCurrentPasswordCorrect = await user.correctPassword(currentPassword, user.password);
+    const isCurrentPasswordCorrect = await user.comparePassword(currentPassword, user.password);
     if (!isCurrentPasswordCorrect) {
       return res.status(400).json({
         success: false,
@@ -272,6 +272,123 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error changing password',
+      error: error.message
+    });
+  }
+};
+
+// Add user rating (Admin only)
+exports.addUserRating = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Add new rating
+    user.ratings.push({
+      rating,
+      comment,
+      createdAt: new Date()
+    });
+
+    // Update average rating
+    user.updateAverageRating();
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Rating added successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avgRating: user.avgRating,
+        totalRatings: user.ratings.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Add user rating error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding rating',
+      error: error.message
+    });
+  }
+};
+
+// Get user ratings (Admin only)
+exports.getUserRatings = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('ratings avgRating name email');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avgRating: user.avgRating,
+        ratings: user.ratings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user ratings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching ratings',
+      error: error.message
+    });
+  }
+};
+
+// Get top rated customers (Admin only)
+exports.getTopRatedCustomers = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const topCustomers = await User.find({ 
+      role: 'user',
+      avgRating: { $gt: 0 }
+    })
+    .select('name email phone avgRating ratings createdAt')
+    .sort({ avgRating: -1, 'ratings.length': -1 })
+    .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      count: topCustomers.length,
+      customers: topCustomers
+    });
+
+  } catch (error) {
+    console.error('Get top rated customers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top rated customers',
       error: error.message
     });
   }
@@ -385,9 +502,6 @@ exports.deleteUser = async (req, res) => {
     user.isActive = false;
     await user.save();
 
-    // Alternatively, if you want to permanently delete:
-    // await User.findByIdAndDelete(req.params.id);
-
     res.json({
       success: true,
       message: 'User deleted successfully'
@@ -398,342 +512,6 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting user',
-      error: error.message
-    });
-  }
-};
-
-// Get user statistics (Admin only)
-exports.getUserStatistics = async (req, res) => {
-  try {
-    // Total users count
-    const totalUsers = await User.countDocuments();
-    
-    // New users this month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    
-    const newUsersThisMonth = await User.countDocuments({
-      createdAt: { $gte: startOfMonth }
-    });
-
-    // Users by role
-    const usersByRole = await User.aggregate([
-      {
-        $group: {
-          _id: '$role',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    // Users registration trend (last 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
-    const registrationTrend = await User.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: sixMonthsAgo }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { '_id.year': 1, '_id.month': 1 }
-      }
-    ]);
-
-    // Users with most bookings
-    const topUsers = await Booking.aggregate([
-      {
-        $group: {
-          _id: '$user',
-          bookingCount: { $sum: 1 },
-          totalSpent: { $sum: '$totalPrice' }
-        }
-      },
-      {
-        $sort: { bookingCount: -1 }
-      },
-      {
-        $limit: 10
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      {
-        $unwind: '$user'
-      },
-      {
-        $project: {
-          'user.name': 1,
-          'user.email': 1,
-          'user.phone': 1,
-          bookingCount: 1,
-          totalSpent: 1
-        }
-      }
-    ]);
-
-    const statistics = {
-      totalUsers,
-      newUsersThisMonth,
-      usersByRole: usersByRole.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {}),
-      registrationTrend,
-      topUsers
-    };
-
-    res.json({
-      success: true,
-      statistics
-    });
-
-  } catch (error) {
-    console.error('Get user statistics error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching user statistics',
-      error: error.message
-    });
-  }
-};
-
-// Upload user avatar
-exports.uploadAvatar = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please upload an image file'
-      });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { 
-        avatar: `/uploads/avatars/${req.file.filename}`,
-        updatedAt: Date.now()
-      },
-      { new: true }
-    ).select('-password');
-
-    res.json({
-      success: true,
-      message: 'Avatar uploaded successfully',
-      user
-    });
-
-  } catch (error) {
-    console.error('Upload avatar error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error uploading avatar',
-      error: error.message
-    });
-  }
-};
-
-// Verify user (Admin only)
-exports.verifyUser = async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { 
-        isVerified: true,
-        updatedAt: Date.now()
-      },
-      { new: true }
-    ).select('-password');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'User verified successfully',
-      user
-    });
-
-  } catch (error) {
-    console.error('Verify user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error verifying user',
-      error: error.message
-    });
-  }
-};
-
-// Change user role (Admin only)
-exports.changeUserRole = async (req, res) => {
-  try {
-    const { role } = req.body;
-
-    if (!['user', 'admin'].includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role. Must be either "user" or "admin"'
-      });
-    }
-
-    // Prevent changing own role
-    if (req.params.id === req.user.id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot change your own role'
-      });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { 
-        role,
-        updatedAt: Date.now()
-      },
-      { new: true }
-    ).select('-password');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: `User role changed to ${role} successfully`,
-      user
-    });
-
-  } catch (error) {
-    console.error('Change user role error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error changing user role',
-      error: error.message
-    });
-  }
-};
-
-// Get user's booking history with details
-exports.getUserBookingsHistory = async (req, res) => {
-  try {
-    const { page = 1, limit = 10, status, startDate, endDate } = req.query;
-    
-    let filter = { user: req.params.id };
-    
-    if (status) filter.status = status;
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
-    }
-
-    const bookings = await Booking.find(filter)
-      .populate('car', 'make model images year type fuelType transmission')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Booking.countDocuments(filter);
-
-    res.json({
-      success: true,
-      count: bookings.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
-      bookings
-    });
-
-  } catch (error) {
-    console.error('Get user bookings history error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching user bookings history',
-      error: error.message
-    });
-  }
-};
-
-// Search users with advanced filtering (Admin only)
-exports.searchUsers = async (req, res) => {
-  try {
-    const {
-      query,
-      role,
-      isVerified,
-      registrationDateFrom,
-      registrationDateTo,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
-
-    let filter = {};
-
-    // Text search
-    if (query) {
-      filter.$or = [
-        { name: new RegExp(query, 'i') },
-        { email: new RegExp(query, 'i') },
-        { phone: new RegExp(query, 'i') },
-        { 'address.city': new RegExp(query, 'i') }
-      ];
-    }
-
-    // Role filter
-    if (role) filter.role = role;
-
-    // Verification filter
-    if (isVerified !== undefined) filter.isVerified = isVerified === 'true';
-
-    // Registration date range
-    if (registrationDateFrom || registrationDateTo) {
-      filter.createdAt = {};
-      if (registrationDateFrom) filter.createdAt.$gte = new Date(registrationDateFrom);
-      if (registrationDateTo) filter.createdAt.$lte = new Date(registrationDateTo);
-    }
-
-    const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const users = await User.find(filter)
-      .select('-password')
-      .sort(sortOptions);
-
-    res.json({
-      success: true,
-      count: users.length,
-      users
-    });
-
-  } catch (error) {
-    console.error('Search users error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error searching users',
       error: error.message
     });
   }
