@@ -1067,72 +1067,7 @@ async function loadUserBookings() {
     }
 }
 
-// Display bookings
-function displayBookings() {
-    const container = document.getElementById('bookingsContainer');
-    if (!container) return;
-    
-    if (!currentUser) {
-        container.innerHTML = `
-            <div class="no-bookings">
-                <i class="fas fa-key"></i>
-                <h3>Please login to view your bookings</h3>
-                <p>Login to see your booking history and manage your rentals</p>
-                <button class="btn btn-primary" onclick="showLogin()">Login Now</button>
-            </div>
-        `;
-        return;
-    }
 
-    if (bookings.length === 0) {
-        container.innerHTML = `
-            <div class="no-bookings">
-                <i class="fas fa-calendar-plus"></i>
-                <h3>No bookings yet</h3>
-                <p>Book your first car to see your reservations here!</p>
-                <button class="btn btn-primary" onclick="scrollToCars()">Browse Cars</button>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = bookings.map(booking => {
-        return `
-        <div class="booking-card" data-booking-id="${booking._id}">
-            <div class="booking-header">
-                <h3>${booking.car?.make || 'Car'} ${booking.car?.model || ''}</h3>
-                <span class="booking-status ${booking.status}">${booking.status.toUpperCase()}</span>
-            </div>
-            <div class="booking-details">
-                <p><i class="fas fa-calendar"></i> <strong>Dates:</strong> 
-                   ${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}</p>
-                <p><i class="fas fa-clock"></i> <strong>Duration:</strong> 
-                   ${booking.duration} ${booking.rentalType}</p>
-                <p><i class="fas fa-rupee-sign"></i> <strong>Total:</strong> ₹${booking.totalPrice}</p>
-                <p><i class="fas fa-map-marker-alt"></i> <strong>Pickup:</strong> ${booking.pickupLocation?.address || 'Main Branch'}</p>
-            </div>
-            <div class="booking-footer">
-                <small>Booked on: ${new Date(booking.createdAt).toLocaleDateString()}</small>
-                <div class="booking-actions">
-                    ${booking.status === 'pending' ? 
-                        `<button class="btn btn-warning btn-small" onclick="cancelBooking('${booking._id}')">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>` : ''}
-                    
-                    ${booking.status === 'confirmed' ? 
-                        `<button class="btn btn-warning btn-small" onclick="cancelBooking('${booking._id}')">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>` : ''}
-                    
-                    ${booking.status === 'active' ? 
-                        `<button class="btn btn-success btn-small" onclick="markBookingAsCompleted('${booking._id}')">
-                            <i class="fas fa-check"></i> Mark Complete
-                        </button>` : ''}
-                </div>
-            </div>
-        </div>
-    `}).join('');
-}
 
 // Update UI based on auth status - FIXED ADMIN DASHBOARD
 function updateUI() {
@@ -1588,5 +1523,1024 @@ async function markBookingAsCompleted(bookingId) {
         showNotification('Error: ' + error.message, 'error');
     }
 }
+
+
+// Reviews & Ratings Variables
+let currentReviewsPage = 1;
+let hasMoreReviews = true;
+let currentReviewType = 'all';
+
+// Add these new functions to your script.js
+function closeReviewsPage() {
+    window.location.href = 'index.html';
+}
+
+function goBackToHome() {
+     window.location.href = 'index.html'; 
+}
+
+// Update the showReviewsPage function
+function showReviewsPage() {
+    // Hide all sections
+    document.querySelectorAll('section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Show reviews section
+    document.getElementById('reviews').style.display = 'block';
+    
+    // Load reviews data
+    loadReviewsOverview();
+    loadAllReviews();
+    setupReviewsTabs();
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Update the setupReviewsTabs function with fixed star rating
+function setupReviewsTabs() {
+    // Tab switching
+    document.querySelectorAll('.reviews-tabs .tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            
+            // Update active tab button
+            document.querySelectorAll('.reviews-tabs .tab-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Update active tab content
+            document.querySelectorAll('#reviews .tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            // Load tab-specific content
+            switch(tabName) {
+                case 'all-reviews':
+                    loadAllReviews();
+                    break;
+                case 'my-reviews':
+                    loadMyReviews();
+                    break;
+                case 'write-review':
+                    setupWriteReviewTab();
+                    break;
+            }
+        });
+    });
+    
+    // Review type switching - FIXED CAR REVIEW BUTTON
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            
+            // Update active type button
+            document.querySelectorAll('.type-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Show corresponding form
+            document.getElementById('websiteReviewForm').classList.remove('active');
+            document.getElementById('carReviewForm').classList.remove('active');
+            
+            if (type === 'website') {
+                document.getElementById('websiteReviewForm').classList.add('active');
+            } else {
+                document.getElementById('carReviewForm').classList.add('active');
+                loadBookingsForReview();
+            }
+        });
+    });
+    
+    // Forward Star rating functionality - FIXED
+    setupForwardStarRating();
+    
+    // Form submissions
+    const websiteReviewForm = document.getElementById('websiteReviewFormElement');
+    const carReviewForm = document.getElementById('carReviewFormElement');
+    
+    if (websiteReviewForm) {
+        websiteReviewForm.addEventListener('submit', handleWebsiteReview);
+    }
+    if (carReviewForm) {
+        carReviewForm.addEventListener('submit', handleCarReview);
+    }
+    
+    // Filter changes
+    const typeFilter = document.getElementById('reviewTypeFilter');
+    const sortFilter = document.getElementById('reviewSortFilter');
+    const ratingFilter = document.getElementById('reviewRatingFilter');
+    
+    if (typeFilter) typeFilter.addEventListener('change', loadAllReviews);
+    if (sortFilter) sortFilter.addEventListener('change', loadAllReviews);
+    if (ratingFilter) ratingFilter.addEventListener('change', loadAllReviews);
+}
+
+// Setup forward star rating - FIXED VERSION
+function setupForwardStarRating() {
+    document.querySelectorAll('.star-rating-forward').forEach(rating => {
+        const stars = rating.querySelectorAll('input[type="radio"]');
+        const labels = rating.querySelectorAll('label');
+        
+        stars.forEach((star, index) => {
+            star.addEventListener('change', function() {
+                // Update star colors - forward direction
+                labels.forEach((label, labelIndex) => {
+                    if (labelIndex <= index) {
+                        label.style.color = '#ffc107';
+                        label.style.textShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
+                    } else {
+                        label.style.color = '#e4e5e9';
+                        label.style.textShadow = 'none';
+                    }
+                });
+            });
+            
+            // Add hover effect
+            star.addEventListener('mouseenter', function() {
+                labels.forEach((label, labelIndex) => {
+                    if (labelIndex <= index) {
+                        label.style.transform = 'scale(1.2)';
+                        label.style.color = '#ffd54f';
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseleave', function() {
+                labels.forEach((label, labelIndex) => {
+                    label.style.transform = 'scale(1)';
+                    // Restore actual selected state
+                    const checkedStar = rating.querySelector('input[type="radio"]:checked');
+                    if (checkedStar) {
+                        const checkedIndex = Array.from(stars).indexOf(checkedStar);
+                        if (labelIndex <= checkedIndex) {
+                            label.style.color = '#ffc107';
+                        } else {
+                            label.style.color = '#e4e5e9';
+                        }
+                    } else {
+                        label.style.color = '#e4e5e9';
+                    }
+                });
+            });
+        });
+        
+        // Add click effect to labels
+        labels.forEach((label, index) => {
+            label.addEventListener('click', function() {
+                // Trigger the corresponding radio button
+                stars[index].checked = true;
+                stars[index].dispatchEvent(new Event('change'));
+            });
+        });
+    });
+}
+
+// Update the loadBookingsForReview function to fix car review button
+async function loadBookingsForReview() {
+    try {
+        const select = document.getElementById('selectBooking');
+        const carReviewBtn = document.getElementById('carReviewBtn');
+        
+        // Enable car review button initially
+        carReviewBtn.disabled = false;
+        carReviewBtn.title = 'Select a completed booking to review';
+        
+        select.innerHTML = '<option value="">Loading your bookings...</option>';
+        
+        const response = await mobileFetch(`${API_BASE}/bookings/my-bookings`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const completedBookings = result.bookings.filter(booking => 
+                booking.status === 'completed' && !booking.hasReview
+            );
+            
+            if (completedBookings.length === 0) {
+                select.innerHTML = '<option value="">No completed bookings available for review</option>';
+                carReviewBtn.disabled = true;
+                carReviewBtn.title = 'No completed bookings available for review';
+                carReviewBtn.style.opacity = '0.6';
+                return;
+            }
+            
+            select.innerHTML = '<option value="">Choose a booking to review</option>';
+            completedBookings.forEach(booking => {
+                const option = document.createElement('option');
+                option.value = booking._id;
+                option.textContent = `${booking.car.make} ${booking.car.model} - ${new Date(booking.startDate).toLocaleDateString()}`;
+                option.setAttribute('data-car', JSON.stringify(booking.car));
+                select.appendChild(option);
+            });
+            
+            // Enable car review button
+            carReviewBtn.disabled = false;
+            carReviewBtn.title = '';
+            carReviewBtn.style.opacity = '1';
+            
+            // Add change event listener
+            select.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.value) {
+                    const car = JSON.parse(selectedOption.getAttribute('data-car'));
+                    showSelectedCarInfo(car, selectedOption.value);
+                    document.getElementById('carReviewFormElement').style.display = 'block';
+                } else {
+                    document.getElementById('carReviewFormElement').style.display = 'none';
+                }
+            });
+            
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error loading bookings for review:', error);
+        document.getElementById('selectBooking').innerHTML = '<option value="">Error loading bookings</option>';
+        const carReviewBtn = document.getElementById('carReviewBtn');
+        carReviewBtn.disabled = true;
+        carReviewBtn.title = 'Error loading bookings';
+        carReviewBtn.style.opacity = '0.6';
+    }
+}
+
+// Update reset star rating function for forward stars
+function resetStarRating(type) {
+    const stars = document.querySelectorAll(`input[name="${type}-rating"]`);
+    const labels = document.querySelectorAll(`.star-rating-forward input[name="${type}-rating"] + label`);
+    
+    stars.forEach(star => star.checked = false);
+    labels.forEach(label => {
+        label.style.color = '#e4e5e9';
+        label.style.textShadow = 'none';
+        label.style.transform = 'scale(1)';
+    });
+}
+
+
+
+// Setup star rating
+function setupStarRating() {
+    document.querySelectorAll('.star-rating').forEach(rating => {
+        const stars = rating.querySelectorAll('input[type="radio"]');
+        const labels = rating.querySelectorAll('label');
+        
+        stars.forEach((star, index) => {
+            star.addEventListener('change', function() {
+                // Update star colors
+                labels.forEach((label, labelIndex) => {
+                    if (labelIndex <= index) {
+                        label.style.color = '#ffc107';
+                    } else {
+                        label.style.color = '#e4e5e9';
+                    }
+                });
+            });
+        });
+    });
+}
+
+// Load reviews overview
+async function loadReviewsOverview() {
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews?limit=1`);
+        const result = await response.json();
+        
+        if (result.success && result.averageRatings) {
+            // Update overview stats
+            document.getElementById('websiteRating').textContent = 
+                result.averageRatings.averageRating || '0.0';
+            document.getElementById('totalReviews').textContent = 
+                result.total || '0';
+            // You might need additional API calls for car reviews count
+        }
+    } catch (error) {
+        console.error('Error loading reviews overview:', error);
+    }
+}
+
+// Load all reviews
+async function loadAllReviews(reset = true) {
+    try {
+        if (reset) {
+            currentReviewsPage = 1;
+            hasMoreReviews = true;
+            document.getElementById('allReviewsList').innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading reviews...</p>
+                </div>
+            `;
+        }
+        
+        const typeFilter = document.getElementById('reviewTypeFilter').value;
+        const sortFilter = document.getElementById('reviewSortFilter').value;
+        const ratingFilter = document.getElementById('reviewRatingFilter').value;
+        
+        let url = `${API_BASE}/reviews?page=${currentReviewsPage}&limit=10&sort=${sortFilter}`;
+        
+        if (typeFilter !== 'all') {
+            url += `&type=${typeFilter}`;
+        }
+        if (ratingFilter !== 'all') {
+            url += `&rating=${ratingFilter}`;
+        }
+        
+        const response = await mobileFetch(url);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAllReviews(result.reviews, reset);
+            hasMoreReviews = result.reviews.length === 10;
+            
+            // Show/hide load more button
+            const loadMoreBtn = document.getElementById('loadMoreReviews');
+            if (loadMoreBtn) {
+                loadMoreBtn.style.display = hasMoreReviews ? 'block' : 'none';
+            }
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+        document.getElementById('allReviewsList').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Reviews</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Display all reviews
+function displayAllReviews(reviews, reset) {
+    const container = document.getElementById('allReviewsList');
+    
+    if (!reviews || reviews.length === 0) {
+        if (reset) {
+            container.innerHTML = `
+                <div class="no-data">
+                    <i class="fas fa-star"></i>
+                    <h3>No Reviews Yet</h3>
+                    <p>Be the first to share your experience!</p>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    let reviewsHTML = reset ? '' : container.innerHTML;
+    
+    reviews.forEach(review => {
+        const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+        const timeAgo = getTimeAgo(review.createdAt);
+        
+        reviewsHTML += `
+            <div class="review-card" data-review-id="${review._id}">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <img src="${review.user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'}" 
+                             alt="${review.user?.name}" class="reviewer-avatar">
+                        <div class="reviewer-details">
+                            <div class="reviewer-name">${review.user?.name}</div>
+                            <div class="review-date">${timeAgo}</div>
+                        </div>
+                    </div>
+                    <div class="review-type-badge ${review.type}">
+                        ${review.type === 'car' ? '<i class="fas fa-car"></i> Car Review' : '<i class="fas fa-globe"></i> Website Review'}
+                    </div>
+                </div>
+                
+                <div class="review-rating">
+                    <div class="stars">${stars}</div>
+                    <span class="rating-text">${review.rating}.0</span>
+                </div>
+                
+                <h4 class="review-title">${review.title}</h4>
+                <p class="review-comment">${review.comment}</p>
+                
+                ${review.type === 'car' && review.car ? `
+                    <div class="reviewed-car">
+                        <small>Reviewed: ${review.car.make} ${review.car.model}</small>
+                    </div>
+                ` : ''}
+                
+                <div class="review-actions">
+                    <button class="helpful-btn" onclick="markReviewHelpful('${review._id}', 'helpful')">
+                        <i class="fas fa-thumbs-up"></i>
+                        Helpful (${review.helpfulCount || 0})
+                    </button>
+                    <button class="report-btn" onclick="reportReview('${review._id}')">
+                        <i class="fas fa-flag"></i> Report
+                    </button>
+                </div>
+                
+                ${review.isVerified ? `
+                    <div class="verified-badge">
+                        <i class="fas fa-check-circle"></i> Verified Review
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    container.innerHTML = reviewsHTML;
+}
+
+// Load more reviews
+function loadMoreReviews() {
+    const loadMoreBtn = document.getElementById('loadMoreReviews');
+    const spinner = loadMoreBtn.querySelector('.fa-spinner');
+    
+    spinner.style.display = 'inline-block';
+    loadMoreBtn.disabled = true;
+    
+    currentReviewsPage++;
+    loadAllReviews(false).finally(() => {
+        spinner.style.display = 'none';
+        loadMoreBtn.disabled = false;
+    });
+}
+
+// Load user's reviews
+async function loadMyReviews() {
+    if (!currentUser) {
+        document.getElementById('myReviewsContainer').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-key"></i>
+                <h3>Please Login</h3>
+                <p>Login to view your reviews and ratings</p>
+                <button class="btn btn-primary" onclick="showLogin()">Login Now</button>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        document.getElementById('myReviewsContainer').innerHTML = `
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading your reviews...</p>
+            </div>
+        `;
+        
+        const response = await mobileFetch(`${API_BASE}/reviews/my-reviews`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayMyReviews(result.reviews);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error loading my reviews:', error);
+        document.getElementById('myReviewsContainer').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Reviews</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Display user's reviews
+function displayMyReviews(reviews) {
+    const container = document.getElementById('myReviewsContainer');
+    
+    if (!reviews || reviews.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-star"></i>
+                <h3>No Reviews Yet</h3>
+                <p>You haven't submitted any reviews yet.</p>
+                <button class="btn btn-primary" onclick="switchToWriteReview()">Write Your First Review</button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="my-reviews-stats">
+            <div class="stat-item">
+                <span class="stat-number">${reviews.length}</span>
+                <span class="stat-label">Total Reviews</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${(reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)}</span>
+                <span class="stat-label">Average Rating</span>
+            </div>
+        </div>
+        <div class="my-reviews-list">
+            ${reviews.map(review => {
+                const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+                const timeAgo = getTimeAgo(review.createdAt);
+                
+                return `
+                    <div class="my-review-card">
+                        <div class="review-header">
+                            <div class="review-type-badge ${review.type}">
+                                ${review.type === 'car' ? '<i class="fas fa-car"></i> Car Review' : '<i class="fas fa-globe"></i> Website Review'}
+                            </div>
+                            <div class="review-actions">
+                                <button class="btn btn-small btn-danger" onclick="deleteMyReview('${review._id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="review-rating">
+                            <div class="stars">${stars}</div>
+                            <span class="rating-text">${review.rating}.0</span>
+                            <span class="review-date">${timeAgo}</span>
+                        </div>
+                        
+                        <h4 class="review-title">${review.title}</h4>
+                        <p class="review-comment">${review.comment}</p>
+                        
+                        ${review.type === 'car' && review.car ? `
+                            <div class="reviewed-car">
+                                <strong>Car:</strong> ${review.car.make} ${review.car.model}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="review-stats">
+                            <span><i class="fas fa-thumbs-up"></i> ${review.helpfulCount || 0} helpful</span>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// Setup write review tab
+function setupWriteReviewTab() {
+    if (!currentUser) {
+        document.querySelector('.write-review-container').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-key"></i>
+                <h3>Please Login</h3>
+                <p>Login to write a review</p>
+                <button class="btn btn-primary" onclick="showLogin()">Login Now</button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Load bookings for car reviews
+    loadBookingsForReview();
+}
+
+
+
+// Show selected car info
+function showSelectedCarInfo(car, bookingId) {
+    const container = document.getElementById('selectedCarInfo');
+    container.innerHTML = `
+        <div class="selected-car-display">
+            <img src="${getCarImage(car)}" alt="${car.make} ${car.model}" class="car-image-small">
+            <div class="car-details">
+                <h5>${car.make} ${car.model} (${car.year})</h5>
+                <p>${car.type} • ${car.fuelType} • ${car.transmission}</p>
+                <input type="hidden" id="selectedCarId" value="${car._id}">
+                <input type="hidden" id="selectedBookingId" value="${bookingId}">
+            </div>
+        </div>
+    `;
+}
+
+// Handle website review submission
+async function handleWebsiteReview(e) {
+    e.preventDefault();
+    
+    if (!currentUser) {
+        showNotification('Please login to submit a review', 'warning');
+        showLogin();
+        return;
+    }
+    
+    const rating = document.querySelector('input[name="website-rating"]:checked');
+    const title = document.getElementById('websiteReviewTitle').value;
+    const comment = document.getElementById('websiteReviewComment').value;
+    
+    if (!rating) {
+        showNotification('Please select a rating', 'error');
+        return;
+    }
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'website',
+                rating: parseInt(rating.value),
+                title: title,
+                comment: comment
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Website review submitted successfully!', 'success');
+            document.getElementById('websiteReviewFormElement').reset();
+            resetStarRating('website');
+            loadMyReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error submitting website review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Handle car review submission
+async function handleCarReview(e) {
+    e.preventDefault();
+    
+    const rating = document.querySelector('input[name="car-rating"]:checked');
+    const title = document.getElementById('carReviewTitle').value;
+    const comment = document.getElementById('carReviewComment').value;
+    const carId = document.getElementById('selectedCarId').value;
+    const bookingId = document.getElementById('selectedBookingId').value;
+    
+    if (!rating) {
+        showNotification('Please select a rating', 'error');
+        return;
+    }
+    
+    if (!carId || !bookingId) {
+        showNotification('Please select a booking to review', 'error');
+        return;
+    }
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'car',
+                rating: parseInt(rating.value),
+                title: title,
+                comment: comment,
+                carId: carId,
+                bookingId: bookingId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Car review submitted successfully!', 'success');
+            document.getElementById('carReviewFormElement').reset();
+            resetStarRating('car');
+            document.getElementById('carReviewFormElement').style.display = 'none';
+            document.getElementById('selectBooking').value = '';
+            loadBookingsForReview();
+            loadMyReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error submitting car review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+
+// Mark review as helpful
+async function markReviewHelpful(reviewId, action) {
+    if (!currentUser) {
+        showNotification('Please login to rate reviews', 'warning');
+        showLogin();
+        return;
+    }
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews/${reviewId}/helpful?action=${action}`, {
+            method: 'PUT'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update the UI
+            const reviewCard = document.querySelector(`[data-review-id="${reviewId}"]`);
+            if (reviewCard) {
+                const helpfulBtn = reviewCard.querySelector('.helpful-btn');
+                helpfulBtn.innerHTML = `<i class="fas fa-thumbs-up"></i> Helpful (${result.helpfulCount})`;
+            }
+            showNotification('Thanks for your feedback!', 'success');
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error marking review helpful:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Report review
+async function reportReview(reviewId) {
+    if (!currentUser) {
+        showNotification('Please login to report reviews', 'warning');
+        showLogin();
+        return;
+    }
+    
+    const reason = prompt('Please briefly describe why you are reporting this review:');
+    if (!reason) return;
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews/${reviewId}/report`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Review reported successfully. Thank you for helping us maintain quality content.', 'success');
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error reporting review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Delete user's review
+async function deleteMyReview(reviewId) {
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews/${reviewId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Review deleted successfully!', 'success');
+            loadMyReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error deleting review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Switch to write review tab
+function switchToWriteReview() {
+    document.querySelectorAll('.reviews-tabs .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-tab') === 'write-review') {
+            btn.classList.add('active');
+        }
+    });
+    
+    document.querySelectorAll('#reviews .tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.getElementById('write-review').classList.add('active');
+    
+    setupWriteReviewTab();
+}
+
+// Show review modal for booking
+function showReviewModal(bookingId, car) {
+    if (!currentUser) {
+        showNotification('Please login to submit a review', 'warning');
+        showLogin();
+        return;
+    }
+    
+    document.getElementById('reviewModalContent').innerHTML = `
+        <div class="review-modal-content">
+            <div class="selected-car-display">
+                <img src="${getCarImage(car)}" alt="${car.make} ${car.model}" class="car-image-small">
+                <div class="car-details">
+                    <h4>${car.make} ${car.model}</h4>
+                    <p>Rate your experience with this car</p>
+                </div>
+            </div>
+            
+            <form id="quickReviewForm">
+                <div class="rating-input">
+                    <label>Overall Rating</label>
+                    <div class="star-rating large">
+                        <input type="radio" id="modal-star5" name="modal-rating" value="5">
+                        <label for="modal-star5">★</label>
+                        <input type="radio" id="modal-star4" name="modal-rating" value="4">
+                        <label for="modal-star4">★</label>
+                        <input type="radio" id="modal-star3" name="modal-rating" value="3">
+                        <label for="modal-star3">★</label>
+                        <input type="radio" id="modal-star2" name="modal-rating" value="2">
+                        <label for="modal-star2">★</label>
+                        <input type="radio" id="modal-star1" name="modal-rating" value="1">
+                        <label for="modal-star1">★</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modalReviewTitle">Review Title</label>
+                    <input type="text" id="modalReviewTitle" placeholder="Summarize your experience" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modalReviewComment">Your Review</label>
+                    <textarea id="modalReviewComment" placeholder="Share your experience with the car..." rows="4" required></textarea>
+                </div>
+                
+                <input type="hidden" id="modalCarId" value="${car._id}">
+                <input type="hidden" id="modalBookingId" value="${bookingId}">
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-paper-plane"></i> Submit Review
+                </button>
+            </form>
+        </div>
+    `;
+    
+    // Setup star rating for modal
+    setupModalStarRating();
+    
+    // Handle form submission
+    const form = document.getElementById('quickReviewForm');
+    form.addEventListener('submit', handleQuickReview);
+    
+    document.getElementById('reviewModal').style.display = 'block';
+}
+
+// Setup modal star rating
+function setupModalStarRating() {
+    const stars = document.querySelectorAll('#quickReviewForm input[type="radio"]');
+    const labels = document.querySelectorAll('#quickReviewForm .star-rating label');
+    
+    stars.forEach((star, index) => {
+        star.addEventListener('change', function() {
+            labels.forEach((label, labelIndex) => {
+                if (labelIndex <= index) {
+                    label.style.color = '#ffc107';
+                    label.style.textShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
+                } else {
+                    label.style.color = '#e4e5e9';
+                    label.style.textShadow = 'none';
+                }
+            });
+        });
+    });
+}
+
+// Handle quick review from modal
+async function handleQuickReview(e) {
+    e.preventDefault();
+    
+    const rating = document.querySelector('input[name="modal-rating"]:checked');
+    const title = document.getElementById('modalReviewTitle').value;
+    const comment = document.getElementById('modalReviewComment').value;
+    const carId = document.getElementById('modalCarId').value;
+    const bookingId = document.getElementById('modalBookingId').value;
+    
+    if (!rating) {
+        showNotification('Please select a rating', 'error');
+        return;
+    }
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            body: JSON.stringify({
+                type: 'car',
+                rating: parseInt(rating.value),
+                title: title,
+                comment: comment,
+                carId: carId,
+                bookingId: bookingId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Review submitted successfully!', 'success');
+            document.getElementById('reviewModal').style.display = 'none';
+            loadUserBookings(); // Refresh bookings to show review status
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error submitting quick review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Utility function to get time ago
+function getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} months ago`;
+    return `${Math.floor(diffInSeconds / 31536000)} years ago`;
+}
+
+// Update displayBookings function to include review buttons
+// Add this to your existing displayBookings function:
+function displayBookings() {
+    const container = document.getElementById('bookingsContainer');
+    if (!container) return;
+    
+    if (!currentUser) {
+        container.innerHTML = `
+            <div class="no-bookings">
+                <i class="fas fa-key"></i>
+                <h3>Please login to view your bookings</h3>
+                <p>Login to see your booking history and manage your rentals</p>
+                <button class="btn btn-primary" onclick="showLogin()">Login Now</button>
+            </div>
+        `;
+        return;
+    }
+
+    if (bookings.length === 0) {
+        container.innerHTML = `
+            <div class="no-bookings">
+                <i class="fas fa-calendar-plus"></i>
+                <h3>No bookings yet</h3>
+                <p>Book your first car to see your reservations here!</p>
+                <button class="btn btn-primary" onclick="scrollToCars()">Browse Cars</button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = bookings.map(booking => {
+        const canReview = booking.status === 'completed' && !booking.hasReview;
+        const hasReviewed = booking.hasReview;
+        
+        return `
+        <div class="booking-card" data-booking-id="${booking._id}">
+            <div class="booking-header">
+                <h3>${booking.car?.make || 'Car'} ${booking.car?.model || ''}</h3>
+                <span class="booking-status ${booking.status}">${booking.status.toUpperCase()}</span>
+            </div>
+            <div class="booking-details">
+                <p><i class="fas fa-calendar"></i> <strong>Dates:</strong> 
+                   ${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}</p>
+                <p><i class="fas fa-clock"></i> <strong>Duration:</strong> 
+                   ${booking.duration} ${booking.rentalType}</p>
+                <p><i class="fas fa-rupee-sign"></i> <strong>Total:</strong> ₹${booking.totalPrice}</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Pickup:</strong> ${booking.pickupLocation?.address || 'Main Branch'}</p>
+            </div>
+            <div class="booking-footer">
+                <small>Booked on: ${new Date(booking.createdAt).toLocaleDateString()}</small>
+                <div class="booking-actions">
+                    ${booking.status === 'pending' ? 
+                        `<button class="btn btn-warning btn-small" onclick="cancelBooking('${booking._id}')">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>` : ''}
+                    
+                    ${booking.status === 'confirmed' ? 
+                        `<button class="btn btn-warning btn-small" onclick="cancelBooking('${booking._id}')">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>` : ''}
+                    
+                    ${booking.status === 'active' ? 
+                        `<button class="btn btn-success btn-small" onclick="markBookingAsCompleted('${booking._id}')">
+                            <i class="fas fa-check"></i> Mark Complete
+                        </button>` : ''}
+                    
+                    ${canReview ? 
+                        `<button class="btn btn-primary btn-small" onclick="showReviewModal('${booking._id}', ${JSON.stringify(booking.car).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-star"></i> Rate Experience
+                        </button>` : ''}
+                    
+                    ${hasReviewed ? 
+                        `<span class="reviewed-badge">
+                            <i class="fas fa-check-circle"></i> Reviewed
+                        </span>` : ''}
+                </div>
+            </div>
+        </div>
+    `}).join('');
+}
+
+
+
 
 console.log('✅ Naidu Car Rentals Frontend loaded successfully!');

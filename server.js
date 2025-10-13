@@ -17,6 +17,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/cars', require('./routes/cars'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/admin', require('./routes/admin'));
+// Add this with other route imports
+app.use('/api/reviews', require('./routes/reviews'));
 
 // Health check
 app.get('/health', (req, res) => {

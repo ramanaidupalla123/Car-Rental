@@ -4,6 +4,7 @@ const { auth, admin } = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Car = require('../models/Car');
+const Review = require('../models/Review'); // ADD THIS IMPORT
 
 // Get dashboard statistics
 router.get('/stats', auth, admin, async (req, res) => {
@@ -38,6 +39,12 @@ router.get('/stats', auth, admin, async (req, res) => {
     const totalCars = await Car.countDocuments();
     const availableCars = await Car.countDocuments({ available: true });
 
+    // Reviews statistics
+    const totalReviews = await Review.countDocuments();
+    const carReviews = await Review.countDocuments({ type: 'car' });
+    const websiteReviews = await Review.countDocuments({ type: 'website' });
+    const flaggedReviews = await Review.countDocuments({ status: 'flagged' });
+
     console.log('✅ Admin: Statistics loaded successfully');
 
     res.json({
@@ -53,7 +60,11 @@ router.get('/stats', auth, admin, async (req, res) => {
         todaysBookings,
         totalCustomers,
         totalCars,
-        availableCars
+        availableCars,
+        totalReviews,
+        carReviews,
+        websiteReviews,
+        flaggedReviews
       }
     });
   } catch (error) {
@@ -319,6 +330,12 @@ router.get('/users/:id', auth, admin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(20);
     
+    // Get user's reviews
+    const userReviews = await Review.find({ user: user._id })
+      .populate('car', 'make model')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
     // Calculate statistics
     const totalBookings = userBookings.length;
     
@@ -334,7 +351,10 @@ router.get('/users/:id', auth, admin, async (req, res) => {
       totalBookings,
       totalSpent,
       successfulBookings,
-      cancelledBookings: userBookings.filter(booking => booking.status === 'cancelled').length
+      cancelledBookings: userBookings.filter(booking => booking.status === 'cancelled').length,
+      totalReviews: userReviews.length,
+      averageRating: userReviews.length > 0 ? 
+        userReviews.reduce((sum, review) => sum + review.rating, 0) / userReviews.length : 0
     };
 
     console.log('✅ Admin: User details loaded successfully');
@@ -344,7 +364,8 @@ router.get('/users/:id', auth, admin, async (req, res) => {
       user: {
         ...user.toObject(),
         stats: userStats,
-        recentBookings: userBookings
+        recentBookings: userBookings,
+        recentReviews: userReviews
       }
     });
 
@@ -841,6 +862,22 @@ router.get('/reports', auth, admin, async (req, res) => {
       }
     ]);
 
+    // Reviews statistics
+    const reviewsStats = await Review.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: '$type',
+          total: { $sum: 1 },
+          averageRating: { $avg: '$rating' }
+        }
+      }
+    ]);
+
     // Convert revenueByStatus to object format
     const revenueByStatusObj = {};
     revenueByStatus.forEach(item => {
@@ -864,7 +901,8 @@ router.get('/reports', auth, admin, async (req, res) => {
         revenueByCarType,
         popularCars,
         topCustomers,
-        bookingTrends
+        bookingTrends,
+        reviewsStats
       }
     });
   } catch (error) {
@@ -876,5 +914,297 @@ router.get('/reports', auth, admin, async (req, res) => {
     });
   }
 });
+
+// REVIEWS MANAGEMENT ROUTES
+
+// Get all reviews with filters (Admin only)
+router.get('/reviews', auth, admin, async (req, res) => {
+  try {
+    console.log('📝 Admin: Fetching reviews...');
+    
+    const {
+      type,
+      status,
+      page = 1,
+      limit = 20,
+      sort = 'newest',
+      search
+    } = req.query;
+
+    // Build filter object
+    let filter = {};
+    
+    if (type && type !== 'all') filter.type = type;
+    if (status && status !== 'all') filter.status = status;
+    
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { comment: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Sort options
+    let sortOption = {};
+    switch (sort) {
+      case 'newest':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'oldest':
+        sortOption = { createdAt: 1 };
+        break;
+      case 'reports':
+        sortOption = { reportCount: -1, createdAt: -1 };
+        break;
+      case 'helpful':
+        sortOption = { helpfulCount: -1, createdAt: -1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    const reviews = await Review.find(filter)
+      .populate('user', 'name email avatar')
+      .populate('car', 'make model images')
+      .populate('booking', 'startDate endDate')
+      .sort(sortOption)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Review.countDocuments(filter);
+
+    // Get statistics
+    const stats = await Review.aggregate([
+      {
+        $group: {
+          _id: '$type',
+          total: { $sum: 1 },
+          averageRating: { $avg: '$rating' },
+          flagged: {
+            $sum: { $cond: [{ $eq: ['$status', 'flagged'] }, 1, 0] }
+          },
+          active: {
+            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    console.log(`✅ Admin: Found ${reviews.length} reviews`);
+
+    res.json({
+      success: true,
+      count: reviews.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit),
+      stats,
+      reviews
+    });
+
+  } catch (error) {
+    console.error('❌ Admin reviews error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching reviews',
+      error: error.message
+    });
+  }
+});
+
+// Get review by ID (Admin only)
+router.get('/reviews/:id', auth, admin, async (req, res) => {
+  try {
+    console.log(`📋 Admin: Fetching review details for ${req.params.id}`);
+    
+    const review = await Review.findById(req.params.id)
+      .populate('user', 'name email phone avatar')
+      .populate('car', 'make model year type images')
+      .populate('booking', 'startDate endDate totalPrice');
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    console.log('✅ Admin: Review details loaded successfully');
+
+    res.json({
+      success: true,
+      review
+    });
+  } catch (error) {
+    console.error('❌ Admin get review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching review',
+      error: error.message
+    });
+  }
+});
+
+// Update review status (Admin only)
+router.put('/reviews/:id/status', auth, admin, async (req, res) => {
+  try {
+    const { status, adminResponse } = req.body;
+    
+    console.log(`🔄 Admin: Updating review ${req.params.id} status to ${status}`);
+    
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    review.status = status;
+    
+    if (adminResponse) {
+      review.adminResponse = {
+        response: adminResponse,
+        respondedBy: req.user.id,
+        respondedAt: new Date()
+      };
+    }
+
+    await review.save();
+
+    console.log('✅ Admin: Review status updated successfully');
+
+    res.json({
+      success: true,
+      message: 'Review status updated successfully',
+      review
+    });
+  } catch (error) {
+    console.error('❌ Admin update review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating review',
+      error: error.message
+    });
+  }
+});
+
+// Verify review (Admin only)
+router.put('/reviews/:id/verify', auth, admin, async (req, res) => {
+  try {
+    console.log(`✅ Admin: Verifying review ${req.params.id}`);
+    
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    review.isVerified = true;
+    await review.save();
+
+    console.log('✅ Admin: Review verified successfully');
+
+    res.json({
+      success: true,
+      message: 'Review verified successfully',
+      review
+    });
+  } catch (error) {
+    console.error('❌ Admin verify review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying review',
+      error: error.message
+    });
+  }
+});
+
+// Delete review (Admin only)
+router.delete('/reviews/:id', auth, admin, async (req, res) => {
+  try {
+    console.log(`🗑️ Admin: Deleting review ${req.params.id}...`);
+    
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Update car ratings if it's a car review
+    if (review.type === 'car') {
+      await updateCarRatings(review.car);
+    }
+
+    await Review.findByIdAndDelete(req.params.id);
+
+    console.log('✅ Admin: Review deleted successfully');
+
+    res.json({
+      success: true,
+      message: 'Review deleted successfully'
+    });
+  } catch (error) {
+    console.error('❌ Admin delete review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting review',
+      error: error.message
+    });
+  }
+});
+
+// Helper function to update car ratings
+async function updateCarRatings(carId) {
+  try {
+    const ratings = await Review.aggregate([
+      {
+        $match: {
+          car: carId,
+          type: 'car',
+          status: 'active'
+        }
+      },
+      {
+        $group: {
+          _id: '$car',
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 },
+          ratingDistribution: {
+            $push: '$rating'
+          }
+        }
+      }
+    ]);
+
+    if (ratings.length > 0) {
+      const distribution = ratings[0].ratingDistribution.reduce((acc, rating) => {
+        acc[rating] = (acc[rating] || 0) + 1;
+        return acc;
+      }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+
+      await Car.findByIdAndUpdate(carId, {
+        averageRating: Math.round(ratings[0].averageRating * 10) / 10,
+        totalReviews: ratings[0].totalReviews,
+        ratingDistribution: distribution
+      });
+    } else {
+      await Car.findByIdAndUpdate(carId, {
+        averageRating: 0,
+        totalReviews: 0,
+        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      });
+    }
+  } catch (error) {
+    console.error('Error updating car ratings:', error);
+  }
+}
 
 module.exports = router;

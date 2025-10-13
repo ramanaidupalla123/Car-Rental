@@ -1456,6 +1456,10 @@
                 <div class="menu-item" data-tab="reports">
                     <i class="fas fa-chart-bar"></i> Reports & Analytics
                 </div>
+                <!-- Add this menu item in the sidebar -->
+                <div class="menu-item" data-tab="reviews-management">
+                    <i class="fas fa-star"></i> Reviews Management
+                </div>
             </div>
         </div>
 
@@ -1829,6 +1833,95 @@
                     </div>
                 </div>
             </div>
+
+
+<!-- Add this tab content in the main content area -->
+<div id="reviews-management" class="tab-content">
+    <div class="table-header">
+        <h3><i class="fas fa-star"></i> Reviews Management</h3>
+        <div class="filters">
+            <select id="reviewTypeFilterAdmin">
+                <option value="all">All Types</option>
+                <option value="car">Car Reviews</option>
+                <option value="website">Website Reviews</option>
+            </select>
+            <select id="reviewStatusFilterAdmin">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="flagged">Flagged</option>
+                <option value="removed">Removed</option>
+            </select>
+            <input type="text" id="reviewSearchAdmin" placeholder="Search reviews...">
+            <button class="btn btn-primary" onclick="loadAdminReviews()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Reviews Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card total-bookings">
+            <div class="stat-icon total-bookings">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="totalReviewsAdmin">0</h3>
+                <p>Total Reviews</p>
+            </div>
+        </div>
+        <div class="stat-card confirmed-bookings">
+            <div class="stat-icon confirmed-bookings">
+                <i class="fas fa-car"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="carReviewsAdmin">0</h3>
+                <p>Car Reviews</p>
+            </div>
+        </div>
+        <div class="stat-card pending-bookings">
+            <div class="stat-icon pending-bookings">
+                <i class="fas fa-globe"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="websiteReviewsAdmin">0</h3>
+                <p>Website Reviews</p>
+            </div>
+        </div>
+        <div class="stat-card active-bookings">
+            <div class="stat-icon active-bookings">
+                <i class="fas fa-flag"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="flaggedReviewsAdmin">0</h3>
+                <p>Flagged Reviews</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminReviewsList" class="table-container">
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading reviews...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Review Details Modal for Admin -->
+<div id="reviewDetailsModal" class="modal">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>Review Details</h3>
+            <span class="close" onclick="closeModal('reviewDetailsModal')">&times;</span>
+        </div>
+        <div id="reviewDetailsContent" class="modal-body">
+            <!-- Review details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+
+
+
         </div>
     </div>
 

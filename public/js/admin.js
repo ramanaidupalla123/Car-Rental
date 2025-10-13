@@ -151,6 +151,10 @@ function switchTab(tabName) {
             console.log('📈 Loading reports...');
             loadReports();
             break;
+        case 'reviews-management':
+            console.log('📝 Loading reviews management...');
+            loadAdminReviews();
+            break;
     }
 }
 
@@ -2155,3 +2159,463 @@ document.head.insertAdjacentHTML('beforeend', `
         }
     </style>
 `);
+
+// Load admin reviews
+async function loadAdminReviews() {
+    try {
+        console.log('📝 Admin: Loading reviews...');
+        showLoading('adminReviewsList', 'Loading reviews...');
+        
+        const typeFilter = document.getElementById('reviewTypeFilterAdmin').value;
+        const statusFilter = document.getElementById('reviewStatusFilterAdmin').value;
+        const searchQuery = document.getElementById('reviewSearchAdmin').value;
+        
+        let url = `${API_BASE}/admin/reviews?limit=50`;
+        
+        const params = new URLSearchParams();
+        if (typeFilter !== 'all') params.append('type', typeFilter);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        if (searchQuery) params.append('search', searchQuery);
+        
+        if (params.toString()) {
+            url += `&${params.toString()}`;
+        }
+        
+        const response = await mobileFetch(url);
+        const result = await response.json();
+        
+        console.log('📝 Admin Reviews API Response:', result);
+        
+        if (result.success) {
+            displayAdminReviews(result.reviews, result.stats);
+            console.log('✅ Admin reviews loaded successfully');
+        } else {
+            throw new Error(result.message || 'Failed to load reviews');
+        }
+    } catch (error) {
+        console.error('❌ Error loading admin reviews:', error);
+        showNotification('Error loading reviews: ' + error.message, 'error');
+        document.getElementById('adminReviewsList').innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Reviews</h3>
+                <p>${error.message}</p>
+                <button class="btn btn-primary" onclick="loadAdminReviews()">Try Again</button>
+            </div>
+        `;
+    }
+}
+
+
+// Display admin reviews
+function displayAdminReviews(reviews, stats) {
+    const container = document.getElementById('adminReviewsList');
+    
+    // Update statistics
+    if (stats) {
+        const totalReviews = stats.reduce((sum, stat) => sum + stat.total, 0);
+        const carReviews = stats.find(stat => stat._id === 'car')?.total || 0;
+        const websiteReviews = stats.find(stat => stat._id === 'website')?.total || 0;
+        const flaggedReviews = stats.reduce((sum, stat) => sum + stat.flagged, 0);
+        
+        document.getElementById('totalReviewsAdmin').textContent = totalReviews;
+        document.getElementById('carReviewsAdmin').textContent = carReviews;
+        document.getElementById('websiteReviewsAdmin').textContent = websiteReviews;
+        document.getElementById('flaggedReviewsAdmin').textContent = flaggedReviews;
+    }
+    
+    if (!reviews || reviews.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-star"></i>
+                <h3>No Reviews Found</h3>
+                <p>No reviews match your current filters.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div style="overflow-x: auto;">
+            <table class="bookings-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Rating</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Reports</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${reviews.map(review => {
+                        const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+                        const timeAgo = getTimeAgo(review.createdAt);
+                        
+                        return `
+                            <tr>
+                                <td>
+                                    <div class="customer-info">
+                                        <div class="customer-name">${review.user?.name || 'N/A'}</div>
+                                        <div class="customer-detail">${review.user?.email || 'N/A'}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge ${review.type}">
+                                        ${review.type === 'car' ? 'Car' : 'Website'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="color: #ffc107; font-weight: bold;">${review.rating}</span>
+                                        <div style="color: #ffc107;">${stars}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="max-width: 200px;">
+                                        <div style="font-weight: 500; margin-bottom: 0.25rem;">${review.title}</div>
+                                        <div style="font-size: 0.8rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            ${review.comment}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge ${review.status}">
+                                        ${review.status}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 500; color: ${review.reportCount > 0 ? '#ef4444' : '#64748b'}">
+                                        ${review.reportCount}
+                                    </span>
+                                </td>
+                                <td>${timeAgo}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-view" onclick="showReviewDetails('${review._id}')">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <select class="status-select" onchange="updateReviewStatus('${review._id}', this.value)">
+                                            <option value="">Status</option>
+                                            <option value="active" ${review.status === 'active' ? 'selected' : ''}>Active</option>
+                                            <option value="flagged" ${review.status === 'flagged' ? 'selected' : ''}>Flagged</option>
+                                            <option value="removed" ${review.status === 'removed' ? 'selected' : ''}>Removed</option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
+            Showing ${reviews.length} reviews
+        </div>
+    `;
+}
+
+// Show review details
+async function showReviewDetails(reviewId) {
+    try {
+        console.log(`📋 Admin: Loading review details for ${reviewId}`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayReviewDetails(result.review);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error loading review details:', error);
+        showNotification('Error loading review details: ' + error.message, 'error');
+    }
+}
+
+// Update the displayReviewDetails function for better appearance
+function displayReviewDetails(review) {
+    const container = document.getElementById('reviewDetailsContent');
+    const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+    const timeAgo = getTimeAgo(review.createdAt);
+    
+    container.innerHTML = `
+        <div class="review-details-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 2rem; border-radius: 16px 16px 0 0; margin: -1.5rem -1.5rem 2rem -1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Review Details</h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">ID: ${review._id}</p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 2.5rem; color: #ffc107; margin-bottom: 0.5rem;">${stars}</div>
+                    <div style="font-weight: 700; font-size: 1.1rem;">${review.rating}.0/5.0</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="form-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <h4 style="color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 0.5rem;">
+                    <i class="fas fa-user" style="color: #3b82f6;"></i> User Information
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">${review.user?.name || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">${review.user?.email || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Phone:</span>
+                        <span class="info-value">${review.user?.phone || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <h4 style="color: #1e293b; border-bottom: 3px solid #f59e0b; padding-bottom: 0.5rem;">
+                    <i class="fas fa-star" style="color: #f59e0b;"></i> Review Information
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    <div class="info-item">
+                        <span class="info-label">Type:</span>
+                        <span class="info-value">
+                            <span class="status-badge ${review.type}">${review.type}</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value">
+                            <span class="status-badge ${review.status}">${review.status}</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Helpful Count:</span>
+                        <span class="info-value" style="color: #059669; font-weight: 700;">${review.helpfulCount || 0}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Report Count:</span>
+                        <span class="info-value" style="color: ${review.reportCount > 0 ? '#ef4444' : '#059669'}; font-weight: 700;">${review.reportCount}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Submitted:</span>
+                        <span class="info-value">${timeAgo}</span>
+                    </div>
+                    ${review.isVerified ? `
+                    <div class="info-item">
+                        <span class="info-label">Verified:</span>
+                        <span class="info-value" style="color: #059669; font-weight: 700;">
+                            <i class="fas fa-check-circle"></i> Yes
+                        </span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+            <h4 style="color: #1e293b; border-bottom: 3px solid #10b981; padding-bottom: 0.5rem;">
+                <i class="fas fa-comment" style="color: #10b981;"></i> Review Content
+            </h4>
+            <div style="margin-top: 1rem;">
+                <h3 style="color: #1e293b; font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    ${review.title}
+                </h3>
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid #e2e8f0; line-height: 1.7;">
+                    <p style="margin: 0; color: #374151; font-size: 1rem; font-weight: 500;">${review.comment}</p>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #64748b; font-weight: 600;">
+                    <i class="fas fa-calendar"></i> Submitted: ${new Date(review.createdAt).toLocaleString()}
+                </div>
+            </div>
+        </div>
+        
+        ${review.type === 'car' && review.car ? `
+            <div class="form-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+                <h4 style="color: #1e293b; border-bottom: 3px solid #8b5cf6; padding-bottom: 0.5rem;">
+                    <i class="fas fa-car" style="color: #8b5cf6;"></i> Car Information
+                </h4>
+                <div style="display: flex; align-items: center; gap: 1.5rem; margin-top: 1rem;">
+                    <img src="${review.car.images && review.car.images[0] ? review.car.images[0].url : 'https://images.unsplash.com/photo-1563720223481-83a56b9ecd6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80'}" 
+                         alt="${review.car.make} ${review.car.model}" 
+                         style="width: 120px; height: 90px; object-fit: cover; border-radius: 10px; border: 3px solid #e2e8f0;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 1.2rem; margin-bottom: 0.5rem;">${review.car.make} ${review.car.model}</div>
+                        <div style="color: #374151; font-size: 0.95rem; font-weight: 600;">
+                            <div>Year: ${review.car.year} • Type: ${review.car.type}</div>
+                            <div>Fuel: ${review.car.fuelType} • Transmission: ${review.car.transmission}</div>
+                            <div>Seats: ${review.car.seats} • Color: ${review.car.color || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+        
+        ${review.adminResponse ? `
+            <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff, #dbeafe); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 1.5rem; border-left: 4px solid #3b82f6;">
+                <h4 style="color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 0.5rem;">
+                    <i class="fas fa-reply" style="color: #3b82f6;"></i> Admin Response
+                </h4>
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-top: 1rem; border: 2px solid #bfdbfe;">
+                    <p style="margin: 0 0 1rem 0; line-height: 1.7; color: #374151; font-weight: 500; font-size: 1rem;">${review.adminResponse.response}</p>
+                    <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">
+                        <i class="fas fa-user-shield"></i> Responded on: ${new Date(review.adminResponse.respondedAt).toLocaleString()}
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+
+        <div class="form-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h4 style="color: #1e293b; margin-bottom: 1.5rem;">Quick Actions</h4>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="verifyReview('${review._id}')" style="padding: 1rem 1.5rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-check-circle"></i> Verify Review
+                </button>
+                <button class="btn btn-warning" onclick="addAdminResponse('${review._id}')" style="padding: 1rem 1.5rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-reply"></i> Add Response
+                </button>
+                <button class="btn btn-danger" onclick="deleteAdminReview('${review._id}')" style="padding: 1rem 1.5rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-trash"></i> Delete Review
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Add hover effects to buttons
+    setTimeout(() => {
+        document.querySelectorAll('#reviewDetailsContent .btn').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            });
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = 'none';
+            });
+        });
+    }, 100);
+    
+    document.getElementById('reviewDetailsModal').style.display = 'block';
+}
+
+// Update review status
+async function updateReviewStatus(reviewId, status) {
+    if (!status) return;
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`Review status updated to ${status} successfully!`, 'success');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error updating review status:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Verify review
+async function verifyReview(reviewId) {
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/verify`, {
+            method: 'PUT'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Review verified successfully!', 'success');
+            closeModal('reviewDetailsModal');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error verifying review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Add admin response
+async function addAdminResponse(reviewId) {
+    const responseText = prompt('Enter your response to this review:');
+    if (!responseText) return;
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ 
+                status: 'active',
+                adminResponse: responseText
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Admin response added successfully!', 'success');
+            closeModal('reviewDetailsModal');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error adding admin response:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Delete review (admin)
+async function deleteAdminReview(reviewId) {
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Review deleted successfully!', 'success');
+            closeModal('reviewDetailsModal');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('❌ Error deleting review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Add this utility function to your admin.js file
+function getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} months ago`;
+    return `${Math.floor(diffInSeconds / 31536000)} years ago`;
+}
+

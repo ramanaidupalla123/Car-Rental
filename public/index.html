@@ -23,17 +23,18 @@
             Car Rentals
         </a>
         
-        <!-- Desktop Navigation -->
-        <nav class="nav-links desktop-nav">
-            <a href="#home">Home</a>
-            <a href="#about">About</a>
-            <a href="#cars">Cars</a>
-            <a href="#bookings">My Bookings</a>
-            <div class="auth-buttons">
-                <button class="btn btn-primary" id="loginBtn">Login</button>
-                <button class="btn btn-secondary" id="registerBtn">Register</button>
-            </div>
-        </nav>
+       <!-- In the desktop navigation -->
+<nav class="nav-links desktop-nav">
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="#cars">Cars</a>
+    <a href="#bookings">My Bookings</a>
+    <a href="#reviews" onclick="showReviewsPage()">Reviews & Ratings</a> <!-- NEW LINK -->
+    <div class="auth-buttons">
+        <button class="btn btn-primary" id="loginBtn">Login</button>
+        <button class="btn btn-secondary" id="registerBtn">Register</button>
+    </div>
+</nav>
 
         <!-- Mobile Hamburger Menu -->
         <button class="mobile-menu-btn" id="mobileMenuBtn">
@@ -67,6 +68,9 @@
                 </a>
                 <a href="#bookings" class="mobile-nav-item" onclick="closeMobileMenu()">
                     <i class="fas fa-calendar-check"></i> My Bookings
+                </a>
+                <a href="#reviews" class="mobile-nav-item" onclick="showReviewsPage(); closeMobileMenu();">
+                    <i class="fas fa-star"></i> Reviews & Ratings <!-- NEW LINK -->
                 </a>
                 
                 <!-- Mobile Auth Buttons - Will be updated by JavaScript -->
@@ -153,6 +157,8 @@
                     <button class="company-btn" data-brand="toyota">Toyota</button>
                     <button class="company-btn" data-brand="maruti">Maruti Suzuki</button>
                     <button class="company-btn" data-brand="hyundai">Hyundai</button>
+                    <button class="company-btn" data-brand="tata">Tata</button>
+                    <button class="company-btn" data-brand="kia">Kia</button>
                 </div>
                 
                 <div class="filter-options">
@@ -189,7 +195,198 @@
             </div>
         </div>
     </section>
+     <!-- Update the Reviews Section -->
+<section id="reviews" class="reviews-section" style="display: none;">
+    <div class="container">
+        <!-- Update this in your reviews section -->
+<div class="reviews-header">
+    <button class="back-home-btn" onclick="goBackToHome()">
+        <i class="fas fa-arrow-left"></i> Back
+    </button>
+    <h2 class="section-title">Reviews & Ratings</h2>
+    <button class="close-reviews-btn" onclick="closeReviewsPage()">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+        
+        <!-- Reviews Overview -->
+        <div class="reviews-overview">
+            <div class="overview-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="websiteRating">0.0</h3>
+                        <p>Website Rating</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalReviews">0</h3>
+                        <p>Total Reviews</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="carReviews">0</h3>
+                        <p>Car Reviews</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Tabs -->
+        <div class="reviews-tabs">
+            <button class="tab-btn active" data-tab="all-reviews">All Reviews</button>
+            <button class="tab-btn" data-tab="my-reviews">My Ratings</button>
+            <button class="tab-btn" data-tab="write-review">Write Review</button>
+        </div>
+
+        <!-- All Reviews Tab -->
+        <div id="all-reviews" class="tab-content active">
+            <div class="reviews-filters">
+                <select id="reviewTypeFilter">
+                    <option value="all">All Reviews</option>
+                    <option value="car">Car Reviews</option>
+                    <option value="website">Website Reviews</option>
+                </select>
+                <select id="reviewSortFilter">
+                    <option value="newest">Newest First</option>
+                    <option value="highest">Highest Rating</option>
+                    <option value="lowest">Lowest Rating</option>
+                    <option value="helpful">Most Helpful</option>
+                </select>
+                <select id="reviewRatingFilter">
+                    <option value="all">All Ratings</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="2">2 Stars</option>
+                    <option value="1">1 Star</option>
+                </select>
+            </div>
+            <div id="allReviewsList" class="reviews-grid">
+                <!-- Reviews will be loaded here -->
+            </div>
+            <div class="load-more-container">
+                <button id="loadMoreReviews" class="btn btn-primary" onclick="loadMoreReviews()">
+                    <i class="fas fa-spinner fa-spin" style="display: none;"></i>
+                    Load More Reviews
+                </button>
+            </div>
+        </div>
+
+        <!-- My Reviews Tab -->
+        <div id="my-reviews" class="tab-content">
+            <div id="myReviewsContainer">
+                <!-- User's reviews will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Write Review Tab -->
+        <div id="write-review" class="tab-content">
+            <div class="write-review-container">
+                <div class="review-type-selector">
+                    <h4>What would you like to review?</h4>
+                    <div class="type-buttons">
+                        <button class="type-btn active" data-type="website">
+                            <i class="fas fa-globe"></i>
+                            <span>Website Experience</span>
+                        </button>
+                        <button class="type-btn" data-type="car" id="carReviewBtn">
+                            <i class="fas fa-car"></i>
+                            <span>Car Experience</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Website Review Form -->
+                <div id="websiteReviewForm" class="review-form active">
+                    <h4>Rate Your Website Experience</h4>
+                    <form id="websiteReviewFormElement">
+                        <div class="rating-input">
+                            <label>Overall Rating</label>
+                            <div class="star-rating-forward">
+                                <input type="radio" id="website-star5" name="website-rating" value="5">
+                                <label for="website-star5" title="5 stars">★</label>
+                                <input type="radio" id="website-star4" name="website-rating" value="4">
+                                <label for="website-star4" title="4 stars">★</label>
+                                <input type="radio" id="website-star3" name="website-rating" value="3">
+                                <label for="website-star3" title="3 stars">★</label>
+                                <input type="radio" id="website-star2" name="website-rating" value="2">
+                                <label for="website-star2" title="2 stars">★</label>
+                                <input type="radio" id="website-star1" name="website-rating" value="1">
+                                <label for="website-star1" title="1 star">★</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="websiteReviewTitle">Review Title</label>
+                            <input type="text" id="websiteReviewTitle" placeholder="Summarize your experience" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="websiteReviewComment">Your Review</label>
+                            <textarea id="websiteReviewComment" placeholder="Share your experience with our website..." rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-paper-plane"></i> Submit Review
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Car Review Form -->
+                <div id="carReviewForm" class="review-form">
+                    <h4>Rate Your Car Experience</h4>
+                    <div id="carReviewSelection">
+                        <div class="form-group">
+                            <label for="selectBooking">Select Booking to Review</label>
+                            <select id="selectBooking" required>
+                                <option value="">Choose a completed booking</option>
+                            </select>
+                        </div>
+                    </div>
+                    <form id="carReviewFormElement" style="display: none;">
+                        <div id="selectedCarInfo" class="selected-car-review">
+                            <!-- Selected car info will appear here -->
+                        </div>
+                        <div class="rating-input">
+                            <label>Overall Rating</label>
+                            <div class="star-rating-forward">
+                                <input type="radio" id="car-star5" name="car-rating" value="5">
+                                <label for="car-star5" title="5 stars">★</label>
+                                <input type="radio" id="car-star4" name="car-rating" value="4">
+                                <label for="car-star4" title="4 stars">★</label>
+                                <input type="radio" id="car-star3" name="car-rating" value="3">
+                                <label for="car-star3" title="3 stars">★</label>
+                                <input type="radio" id="car-star2" name="car-rating" value="2">
+                                <label for="car-star2" title="2 stars">★</label>
+                                <input type="radio" id="car-star1" name="car-rating" value="1">
+                                <label for="car-star1" title="1 star">★</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="carReviewTitle">Review Title</label>
+                            <input type="text" id="carReviewTitle" placeholder="Summarize your car experience" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="carReviewComment">Your Review</label>
+                            <textarea id="carReviewComment" placeholder="Share your experience with the car..." rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-paper-plane"></i> Submit Review
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>   
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
