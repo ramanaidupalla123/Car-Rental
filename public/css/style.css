@@ -5120,3 +5120,145 @@ main {
     color: #5b6576 !important; /* Dark gray */
     font-weight: 600 !important;
 }
+
+
+
+.no-car-selected {
+    text-align: center;
+    padding: 2rem;
+    color: var(--slate);
+}
+
+.no-car-selected i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--light-slate);
+}
+
+.selected-car-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--light-blue);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.car-image-small {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.car-details h5 {
+    margin: 0;
+    color: var(--navy-blue);
+}
+
+.car-details p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.9rem;
+    color: var(--slate);
+}
+
+.reviewed-badge {
+    background: var(--green);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Review Type Badge Styles */
+.status-badge.car {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+}
+
+.status-badge.website {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.status-badge.active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.status-badge.flagged {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.status-badge.removed {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+/* Review Table Enhancements */
+.bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.bookings-table th {
+    background: #f8fafc;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.bookings-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+.bookings-table tr:hover {
+    background: #f8fafc;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-view {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s ease;
+}
+
+.btn-view:hover {
+    background: #2563eb;
+}
+
+.status-select {
+    padding: 0.4rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: white;
+    cursor: pointer;
+}
+
+.status-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
