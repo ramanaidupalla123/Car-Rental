@@ -18,55 +18,75 @@ let bookings = [];
 let cars = [];
 let selectedCar = null;
 
-// Enhanced fetch with mobile error handling
+// Enhanced fetch with mobile error handling - UPDATED VERSION
 async function mobileFetch(url, options = {}) {
-    try {
-        console.log('📡 API Call:', url);
-        
-        // Add timeout for mobile networks (15 seconds for slower connections)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        const fetchOptions = {
-            ...options,
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                ...options.headers
-            }
-        };
-        
-        // Add authorization header if token exists
-        const token = localStorage.getItem('token');
-        if (token && !fetchOptions.headers.Authorization) {
-            fetchOptions.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        const response = await fetch(url, fetchOptions);
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ API Error Response:', errorText);
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return response;
-    } catch (error) {
-        console.error('📱 Mobile fetch error:', error);
-        
-        if (error.name === 'AbortError') {
-            throw new Error('Request timeout. Please check your internet connection.');
-        }
-        
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            throw new Error('Network connection failed. Please check your internet and try again.');
-        }
-        
-        throw error;
+  try {
+    console.log('📡 API Call:', url, options.method || 'GET');
+    
+    // Add timeout for mobile networks (15 seconds for slower connections)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
+    const fetchOptions = {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...options.headers
+      }
+    };
+    
+    // Add authorization header if token exists
+    const token = localStorage.getItem('token');
+    if (token && !fetchOptions.headers.Authorization) {
+      fetchOptions.headers.Authorization = `Bearer ${token}`;
     }
+    
+    const response = await fetch(url, fetchOptions);
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        error: errorText
+      });
+      
+      // Try to parse error message from response
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (e) {
+        // If not JSON, use the text as is
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('📱 Mobile fetch error:', error);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout. Please check your internet connection.');
+    }
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('Network connection failed. Please check your internet and try again.');
+    }
+    
+    throw error;
+  }
 }
 
 // Initialize the application
@@ -1524,11 +1544,10 @@ async function markBookingAsCompleted(bookingId) {
     }
 }
 
-// Reviews & Ratings Variables
+// Reviews & Ratings Functions - BACKEND INTEGRATED
 let currentReviewsPage = 1;
 let hasMoreReviews = true;
 let currentReviewType = 'all';
-let mockReviews = [];
 
 // Initialize mock reviews data with localStorage persistence
 function initializeMockReviews() {
@@ -1567,17 +1586,15 @@ function saveReviewsToStorage() {
     }
 }
 
-// Setup star rating - FIXED REVERSE ORDER
+// Setup star rating
 function setupStarRating() {
     console.log('⭐ Setting up star rating...');
     
-    // Forward star rating for website
     const websiteRating = document.querySelector('#websiteReviewForm .star-rating-forward');
     if (websiteRating) {
         setupSingleStarRating(websiteRating);
     }
     
-    // Forward star rating for car
     const carRating = document.querySelector('#carReviewForm .star-rating-forward');
     if (carRating) {
         setupSingleStarRating(carRating);
@@ -1585,6 +1602,7 @@ function setupStarRating() {
     
     console.log('✅ Star rating setup completed');
 }
+
 
 // Setup single star rating component - FIXED PROPER ORDER
 function setupSingleStarRating(ratingContainer) {
@@ -1654,29 +1672,15 @@ function setupSingleStarRating(ratingContainer) {
     });
 }
 
-// Load all reviews - FIXED TO SHOW PREVIOUS REVIEWS
-function loadAllReviews(reset = true) {
-    console.log('📝 Loading all reviews...');
+// Load all reviews from backend
+async function loadAllReviews(reset = true) {
+    console.log('📝 Loading all reviews from backend...');
     
     try {
         const container = document.getElementById('allReviewsList');
         if (!container) {
             console.error('❌ allReviewsList container not found!');
             return;
-        }
-        
-        // Always load from localStorage to get latest data
-        const savedReviews = localStorage.getItem('carRentalReviews');
-        if (savedReviews) {
-            try {
-                const latestReviews = JSON.parse(savedReviews);
-                console.log(`📝 Loaded ${latestReviews.length} reviews from localStorage for display`);
-                
-                // Update mockReviews with latest data
-                mockReviews = latestReviews;
-            } catch (error) {
-                console.error('❌ Error loading reviews from localStorage for display:', error);
-            }
         }
         
         if (reset) {
@@ -1690,39 +1694,29 @@ function loadAllReviews(reset = true) {
         const ratingFilter = document.getElementById('reviewRatingFilter')?.value || 'all';
         
         console.log(`📝 Filters - Type: ${typeFilter}, Sort: ${sortFilter}, Rating: ${ratingFilter}`);
-        console.log(`📝 Total reviews available: ${mockReviews.length}`);
         
-        // Filter reviews
-        let filteredReviews = [...mockReviews];
+        // Build API URL with filters
+        let url = `${API_BASE}/reviews?`;
+        const params = new URLSearchParams();
         
-        if (typeFilter !== 'all') {
-            filteredReviews = filteredReviews.filter(review => review.type === typeFilter);
+        if (typeFilter !== 'all') params.append('type', typeFilter);
+        if (sortFilter) params.append('sort', sortFilter);
+        if (ratingFilter !== 'all') params.append('rating', ratingFilter);
+        params.append('page', currentReviewsPage);
+        params.append('limit', '10');
+        
+        url += params.toString();
+        
+        const response = await mobileFetch(url);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAllReviews(result.reviews, reset);
+            hasMoreReviews = currentReviewsPage < result.pages;
+            console.log(`✅ Loaded ${result.reviews.length} reviews from backend`);
+        } else {
+            throw new Error(result.message || 'Failed to load reviews');
         }
-        
-        if (ratingFilter !== 'all') {
-            filteredReviews = filteredReviews.filter(review => review.rating === parseInt(ratingFilter));
-        }
-        
-        // Sort reviews
-        switch(sortFilter) {
-            case 'newest':
-                filteredReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                break;
-            case 'highest':
-                filteredReviews.sort((a, b) => b.rating - a.rating);
-                break;
-            case 'lowest':
-                filteredReviews.sort((a, b) => a.rating - b.rating);
-                break;
-            case 'helpful':
-                filteredReviews.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
-                break;
-        }
-        
-        console.log(`📝 Displaying ${filteredReviews.length} filtered reviews`);
-        displayAllReviews(filteredReviews, reset);
-        hasMoreReviews = false; // No pagination in mock data
-        
     } catch (error) {
         console.error('❌ Error loading reviews:', error);
         const container = document.getElementById('allReviewsList');
@@ -1738,51 +1732,51 @@ function loadAllReviews(reset = true) {
     }
 }
 
-// Load reviews overview - FIXED TO SHOW CORRECT COUNTS
-function loadReviewsOverview() {
-    console.log('📊 Loading reviews overview...');
+// Load reviews overview from backend - FIXED VERSION
+async function loadReviewsOverview() {
+    console.log('📊 Loading reviews overview from backend...');
     
     try {
-        // Always load from localStorage to get latest data
-        const savedReviews = localStorage.getItem('carRentalReviews');
-        let reviewsToCount = mockReviews;
+        // Get all ACTIVE reviews to calculate stats (matching admin panel)
+        const response = await mobileFetch(`${API_BASE}/reviews?limit=1000`);
+        const result = await response.json();
         
-        if (savedReviews) {
-            try {
-                reviewsToCount = JSON.parse(savedReviews);
-                console.log(`📊 Loaded ${reviewsToCount.length} reviews from localStorage for overview`);
-            } catch (error) {
-                console.error('❌ Error loading reviews from localStorage for overview:', error);
-            }
-        }
-        
-        // Calculate stats from latest data
-        const totalReviews = reviewsToCount.length;
-        const carReviews = reviewsToCount.filter(review => review.type === 'car').length;
-        const websiteReviews = reviewsToCount.filter(review => review.type === 'website').length;
-        const averageRating = reviewsToCount.length > 0 
-            ? (reviewsToCount.reduce((sum, review) => sum + review.rating, 0) / reviewsToCount.length).toFixed(1)
-            : '0.0';
+        if (result.success) {
+            const reviews = result.reviews;
+            const totalReviews = result.total || reviews.length;
+            const carReviews = reviews.filter(review => review.type === 'car').length;
+            const websiteReviews = reviews.filter(review => review.type === 'website').length;
+            const averageRating = reviews.length > 0 
+                ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+                : '0.0';
 
-        // Update overview stats
+            // Update overview stats
+            const websiteRatingElem = document.getElementById('websiteRating');
+            const totalReviewsElem = document.getElementById('totalReviews');
+            const carReviewsElem = document.getElementById('carReviews');
+            
+            if (websiteRatingElem) websiteRatingElem.textContent = averageRating;
+            if (totalReviewsElem) totalReviewsElem.textContent = totalReviews;
+            if (carReviewsElem) carReviewsElem.textContent = carReviews;
+            
+            console.log(`📊 User Reviews Overview: ${totalReviews} total, ${carReviews} car, ${websiteReviews} website, avg ${averageRating}`);
+        }
+    } catch (error) {
+        console.error('❌ Error loading reviews overview:', error);
+        // Set default values
         const websiteRatingElem = document.getElementById('websiteRating');
         const totalReviewsElem = document.getElementById('totalReviews');
         const carReviewsElem = document.getElementById('carReviews');
         
-        if (websiteRatingElem) websiteRatingElem.textContent = averageRating;
-        if (totalReviewsElem) totalReviewsElem.textContent = totalReviews;
-        if (carReviewsElem) carReviewsElem.textContent = carReviews;
-        
-        console.log(`📊 Reviews overview: ${totalReviews} total, ${carReviews} car, ${websiteReviews} website, avg ${averageRating}`);
-        
-    } catch (error) {
-        console.error('❌ Error loading reviews overview:', error);
+        if (websiteRatingElem) websiteRatingElem.textContent = '0.0';
+        if (totalReviewsElem) totalReviewsElem.textContent = '0';
+        if (carReviewsElem) carReviewsElem.textContent = '0';
     }
 }
 
-// Load user's reviews - FIXED TO SHOW USER'S REVIEWS
-function loadMyReviews() {
-    console.log('📝 Loading my reviews...');
+// Load user's reviews from backend
+async function loadMyReviews() {
+    console.log('📝 Loading my reviews from backend...');
     
     const container = document.getElementById('myReviewsContainer');
     if (!container) {
@@ -1802,35 +1796,48 @@ function loadMyReviews() {
         return;
     }
     
-    // Always load from localStorage to get latest data
-    const savedReviews = localStorage.getItem('carRentalReviews');
-    let allReviews = mockReviews;
-    
-    if (savedReviews) {
-        try {
-            allReviews = JSON.parse(savedReviews);
-            console.log(`📝 Loaded ${allReviews.length} reviews from localStorage for my reviews`);
-        } catch (error) {
-            console.error('❌ Error loading reviews from localStorage for my reviews:', error);
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews/my-reviews`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayMyReviews(result.reviews);
+            console.log(`✅ Loaded ${result.reviews.length} user reviews from backend`);
+        } else {
+            throw new Error(result.message || 'Failed to load user reviews');
         }
+    } catch (error) {
+        console.error('❌ Error loading user reviews:', error);
+        container.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error Loading Reviews</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
     }
-    
-    // Filter reviews by current user
-    const userReviews = allReviews.filter(review => 
-        review.user.email === currentUser.email
-    );
-    
-    console.log(`📝 Found ${userReviews.length} reviews by current user`);
-    displayMyReviews(userReviews);
 }
 
-// Handle website review submission - FIXED STAR RATING VALUE
+// Handle website review submission - ENHANCED DEBUG VERSION
 async function handleWebsiteReview(e) {
     e.preventDefault();
-    console.log('📝 Handling website review submission...');
+    console.log('🌐 WEBSITE REVIEW: Starting website review submission...');
+    
+    // Prevent multiple submissions
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    if (submitButton.disabled) {
+        console.log('⚠️ Form already submitting...');
+        return;
+    }
+    
+    // Disable submit button
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
     
     if (!currentUser) {
         showNotification('Please login to submit a review', 'warning');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
         showLogin();
         return;
     }
@@ -1839,8 +1846,18 @@ async function handleWebsiteReview(e) {
     const titleInput = document.getElementById('websiteReviewTitle');
     const commentInput = document.getElementById('websiteReviewComment');
     
+    // Debug: Log all form values
+    console.log('🌐 WEBSITE REVIEW: Form values:', {
+        rating: rating ? rating.value : 'NOT SELECTED',
+        title: titleInput ? titleInput.value : 'MISSING',
+        comment: commentInput ? commentInput.value : 'MISSING'
+    });
+    
     if (!titleInput || !commentInput) {
+        console.error('❌ WEBSITE REVIEW: Form elements not found');
         showNotification('Review form elements not found', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
         return;
     }
     
@@ -1849,72 +1866,255 @@ async function handleWebsiteReview(e) {
     
     if (!rating) {
         showNotification('Please select a rating', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
         return;
     }
     
     if (!title) {
         showNotification('Please enter a review title', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
         return;
     }
     
     if (!comment) {
         showNotification('Please enter your review comments', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
         return;
     }
 
     try {
-        // Get the correct rating value (already reversed in setup)
         const selectedRating = parseInt(rating.value);
-        console.log(`⭐ Submitting website review with rating: ${selectedRating}`);
+        console.log(`🌐 WEBSITE REVIEW: Submitting with rating: ${selectedRating}`);
         
-        // Create new review object
-        const newReview = {
-            _id: 'review_' + Date.now(),
-            user: {
-                name: currentUser.name,
-                email: currentUser.email
-            },
-            type: 'website',
+        // EXPLICITLY SET TYPE TO WEBSITE
+        const reviewData = {
+            type: 'website', // THIS IS CRITICAL - EXPLICITLY SET TO WEBSITE
             rating: selectedRating,
             title: title,
-            comment: comment,
-            status: 'active',
-            helpfulCount: 0,
-            reportCount: 0,
-            isVerified: true,
-            createdAt: new Date().toISOString()
+            comment: comment
         };
         
-        console.log('✅ Creating new website review:', newReview);
+        console.log('🌐 WEBSITE REVIEW: Final data being sent to server:', reviewData);
         
-        // Add to mock data
-        mockReviews.unshift(newReview);
-        
-        // Save to localStorage for persistence
-        saveReviewsToStorage();
-        
-        showNotification('✅ Website review submitted successfully!', 'success');
-        
-        // Reset form
-        const websiteForm = document.getElementById('websiteReviewFormElement');
-        if (websiteForm) {
-            websiteForm.reset();
+        const response = await mobileFetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            body: JSON.stringify(reviewData)
+        });
+
+        // Check if response is ok
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ WEBSITE REVIEW: Server response error:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        resetStarRating('website');
-        
-        // Refresh reviews immediately with latest data
-        loadAllReviews();
-        loadMyReviews();
-        loadReviewsOverview();
-        
-        console.log('✅ Website review submitted and saved successfully');
-        
+
+        const result = await response.json();
+        console.log('🌐 WEBSITE REVIEW: Server response:', result);
+
+        if (result.success) {
+            showNotification('✅ Website review submitted successfully!', 'success');
+            
+            // Reset form
+            const websiteForm = document.getElementById('websiteReviewFormElement');
+            if (websiteForm) {
+                websiteForm.reset();
+            }
+            resetStarRating('website');
+            
+            // Refresh reviews immediately
+            loadAllReviews();
+            loadMyReviews();
+            loadReviewsOverview();
+            
+            console.log('✅ WEBSITE REVIEW: Successfully submitted and saved to database');
+        } else {
+            throw new Error(result.message || 'Failed to submit review');
+        }
     } catch (error) {
-        console.error('❌ Error submitting website review:', error);
-        showNotification('Error submitting review. Please try again.', 'error');
+        console.error('❌ WEBSITE REVIEW: Error submitting review:', error);
+        showNotification('Error submitting review: ' + error.message, 'error');
+    } finally {
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
     }
 }
 
+// Handle car review submission - ENHANCED DEBUG VERSION
+async function handleCarReview(e) {
+    e.preventDefault();
+    console.log('🚗 CAR REVIEW: Starting car review submission...');
+    
+    // Prevent multiple submissions
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    if (submitButton.disabled) {
+        console.log('⚠️ Form already submitting...');
+        return;
+    }
+    
+    // Disable submit button
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    
+    if (!currentUser) {
+        showNotification('Please login to submit a review', 'warning');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+        showLogin();
+        return;
+    }
+    
+    // Get form elements
+    const rating = document.querySelector('input[name="car-rating"]:checked');
+    const titleInput = document.getElementById('carReviewTitle');
+    const commentInput = document.getElementById('carReviewComment');
+    const carIdInput = document.getElementById('selectedCarId');
+    const bookingIdInput = document.getElementById('selectedBookingId');
+    
+    // Debug: Log all form values
+    console.log('🚗 CAR REVIEW: Form values:', {
+        rating: rating ? rating.value : 'NOT SELECTED',
+        title: titleInput ? titleInput.value : 'MISSING',
+        comment: commentInput ? commentInput.value : 'MISSING',
+        carId: carIdInput ? carIdInput.value : 'MISSING',
+        bookingId: bookingIdInput ? bookingIdInput.value : 'MISSING'
+    });
+    
+    if (!titleInput || !commentInput) {
+        console.error('❌ CAR REVIEW: Form elements not found');
+        showNotification('Review form elements not found', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+        return;
+    }
+    
+    const title = titleInput.value.trim();
+    const comment = commentInput.value.trim();
+    const carId = carIdInput ? carIdInput.value : null;
+    const bookingId = bookingIdInput ? bookingIdInput.value : null;
+    
+    // Validation
+    if (!rating) {
+        showNotification('Please select a rating', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+        return;
+    }
+    
+    if (!title) {
+        showNotification('Please enter a review title', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+        return;
+    }
+    
+    if (!comment) {
+        showNotification('Please enter your review comments', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+        return;
+    }
+    
+    if (!carId || !bookingId) {
+        showNotification('Please select a booking to review', 'error');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+        return;
+    }
+
+    try {
+        const selectedRating = parseInt(rating.value);
+        console.log(`🚗 CAR REVIEW: Submitting with rating: ${selectedRating}`);
+        
+        // EXPLICITLY SET TYPE TO CAR
+        const reviewData = {
+            type: 'car', // THIS IS CRITICAL - EXPLICITLY SET TO CAR
+            rating: selectedRating,
+            title: title,
+            comment: comment,
+            carId: carId,
+            bookingId: bookingId
+        };
+        
+        console.log('🚗 CAR REVIEW: Final data being sent to server:', reviewData);
+        
+        const response = await mobileFetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            body: JSON.stringify(reviewData)
+        });
+
+        // Check if response is ok
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ CAR REVIEW: Server response error:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('🚗 CAR REVIEW: Server response:', result);
+
+        if (result.success) {
+            showNotification('✅ Car review submitted successfully!', 'success');
+            
+            // Reset form
+            const carForm = document.getElementById('carReviewFormElement');
+            if (carForm) {
+                carForm.reset();
+                carForm.style.display = 'none';
+            }
+            resetStarRating('car');
+            
+            // Reset select
+            const selectBooking = document.getElementById('selectBooking');
+            if (selectBooking) {
+                selectBooking.value = '';
+            }
+            
+            // Refresh all data
+            loadAllReviews();
+            loadMyReviews();
+            loadReviewsOverview();
+            loadBookingsForReview();
+            displayBookings();
+            
+            console.log('✅ CAR REVIEW: Successfully submitted and saved to database');
+        } else {
+            throw new Error(result.message || 'Failed to submit review');
+        }
+    } catch (error) {
+        console.error('❌ CAR REVIEW: Error submitting review:', error);
+        showNotification('Error submitting review: ' + error.message, 'error');
+    } finally {
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
+    }
+}
+
+// Debug function to check which form is active
+function checkActiveReviewForm() {
+    const websiteForm = document.querySelector('#websiteReviewForm.active');
+    const carForm = document.querySelector('#carReviewForm.active');
+    const websiteFormElement = document.getElementById('websiteReviewFormElement');
+    const carFormElement = document.getElementById('carReviewFormElement');
+    
+    console.log('🔍 FORM VISIBILITY CHECK:', {
+        'Website Form (active class)': !!websiteForm,
+        'Car Form (active class)': !!carForm,
+        'Website Form Element exists': !!websiteFormElement,
+        'Car Form Element exists': !!carFormElement,
+        'Website Form display style': websiteFormElement ? websiteFormElement.style.display : 'N/A',
+        'Car Form display style': carFormElement ? carFormElement.style.display : 'N/A'
+    });
+    
+    return {
+        websiteActive: !!websiteForm,
+        carActive: !!carForm
+    };
+}
 
 
 // Reset star rating - FIXED PROPER ORDER
@@ -1974,8 +2174,7 @@ function showReviewsPage() {
 
 
 
-
-// Setup reviews tabs
+// Setup reviews tabs - FIXED VERSION
 function setupReviewsTabs() {
     console.log('📝 Setting up reviews tabs...');
     
@@ -2016,7 +2215,7 @@ function setupReviewsTabs() {
         });
     });
     
-    // Review type switching
+    // Review type switching - ENHANCED DEBUG VERSION
     document.querySelectorAll('.type-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const type = this.getAttribute('data-type');
@@ -2032,32 +2231,77 @@ function setupReviewsTabs() {
             const websiteForm = document.getElementById('websiteReviewForm');
             const carForm = document.getElementById('carReviewForm');
             
-            if (websiteForm) websiteForm.classList.remove('active');
-            if (carForm) carForm.classList.remove('active');
+            if (websiteForm) {
+                websiteForm.classList.remove('active');
+                console.log('🌐 Website form hidden');
+            }
+            if (carForm) {
+                carForm.classList.remove('active');
+                console.log('🚗 Car form hidden');
+            }
             
             if (type === 'website') {
-                if (websiteForm) websiteForm.classList.add('active');
+                if (websiteForm) {
+                    websiteForm.classList.add('active');
+                    console.log('✅ Website review form activated and visible');
+                }
             } else {
-                if (carForm) carForm.classList.add('active');
-                loadBookingsForReview();
+                if (carForm) {
+                    carForm.classList.add('active');
+                    console.log('✅ Car review form activated and visible');
+                    loadBookingsForReview();
+                }
             }
+            
+            // Debug: Check which form is actually visible
+            setTimeout(() => {
+                const activeWebsiteForm = document.querySelector('#websiteReviewForm.active');
+                const activeCarForm = document.querySelector('#carReviewForm.active');
+                console.log('🔍 Current active forms:', {
+                    website: !!activeWebsiteForm,
+                    car: !!activeCarForm
+                });
+                
+                // Additional form visibility check
+                checkActiveReviewForm();
+            }, 100);
         });
     });
     
     // Setup star rating
     setupStarRating();
     
-    // Form submissions
+    // Form submissions - FIXED VERSION
     const websiteReviewForm = document.getElementById('websiteReviewFormElement');
     const carReviewForm = document.getElementById('carReviewFormElement');
-    
+
     if (websiteReviewForm) {
-        websiteReviewForm.addEventListener('submit', handleWebsiteReview);
+        websiteReviewForm.addEventListener('submit', function(e) {
+            console.log('🌐 Website review form submitted');
+            handleWebsiteReview(e);
+        });
         console.log('✅ Website review form event listener added');
     }
-    
+
     if (carReviewForm) {
-        carReviewForm.addEventListener('submit', handleCarReview);
+        carReviewForm.addEventListener('submit', function(e) {
+            console.log('🚗 Car review form submitted - checking data');
+            
+            // Debug: Check what form is being submitted
+            const rating = document.querySelector('input[name="car-rating"]:checked');
+            const title = document.getElementById('carReviewTitle').value;
+            const carIdInput = document.getElementById('selectedCarId');
+            const bookingIdInput = document.getElementById('selectedBookingId');
+            
+            console.log('🚗 Car review form data:', {
+                rating: rating ? rating.value : 'none',
+                title: title,
+                carId: carIdInput ? carIdInput.value : 'none',
+                bookingId: bookingIdInput ? bookingIdInput.value : 'none'
+            });
+            
+            handleCarReview(e);
+        });
         console.log('✅ Car review form event listener added');
     }
     
@@ -2084,7 +2328,7 @@ function setupReviewsTabs() {
 
 
 
-// Display all reviews
+// Display all reviews - FIXED VERSION
 function displayAllReviews(reviews, reset) {
     const container = document.getElementById('allReviewsList');
     if (!container) {
@@ -2109,6 +2353,12 @@ function displayAllReviews(reviews, reset) {
         const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
         const timeAgo = getTimeAgo(review.createdAt);
         
+        // FIX: Properly display review type with correct styling
+        const isCarReview = review.type === 'car';
+        const typeBadgeClass = isCarReview ? 'car' : 'website';
+        const typeIcon = isCarReview ? 'fas fa-car' : 'fas fa-globe';
+        const typeText = isCarReview ? 'Car Review' : 'Website Review';
+        
         reviewsHTML += `
             <div class="review-card" data-review-id="${review._id}">
                 <div class="review-header">
@@ -2120,8 +2370,8 @@ function displayAllReviews(reviews, reset) {
                             <div class="review-date">${timeAgo}</div>
                         </div>
                     </div>
-                    <div class="review-type-badge ${review.type}">
-                        ${review.type === 'car' ? '<i class="fas fa-car"></i> Car Review' : '<i class="fas fa-globe"></i> Website Review'}
+                    <div class="review-type-badge ${typeBadgeClass}">
+                        <i class="${typeIcon}"></i> ${typeText}
                     </div>
                 </div>
                 
@@ -2133,9 +2383,9 @@ function displayAllReviews(reviews, reset) {
                 <h4 class="review-title">${review.title}</h4>
                 <p class="review-comment">${review.comment}</p>
                 
-                ${review.type === 'car' && review.car ? `
+                ${isCarReview && review.car ? `
                     <div class="reviewed-car">
-                        <small>Reviewed: ${review.car.make} ${review.car.model}</small>
+                        <small><i class="fas fa-car"></i> Reviewed: ${review.car.make} ${review.car.model}</small>
                     </div>
                 ` : ''}
                 
@@ -2159,7 +2409,7 @@ function displayAllReviews(reviews, reset) {
     });
     
     container.innerHTML = reviewsHTML;
-    console.log(`✅ Displayed ${reviews.length} reviews`);
+    console.log(`✅ Displayed ${reviews.length} reviews with correct types`);
 }
 
 
@@ -2274,20 +2524,60 @@ function showSelectedCarInfo(car, bookingId) {
 
 
 
-
-
-// Mark review as helpful
-function markReviewHelpful(reviewId) {
-    console.log(`👍 Marking review ${reviewId} as helpful`);
+// Delete user's review - BACKEND INTEGRATED
+async function deleteMyReview(reviewId) {
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+        return;
+    }
     
-    const review = mockReviews.find(r => r._id === reviewId);
-    if (review) {
-        review.helpfulCount = (review.helpfulCount || 0) + 1;
-        saveReviewsToStorage(); // Save changes
-        showNotification('Thanks for your feedback!', 'success');
-        loadAllReviews();
+    console.log(`🗑️ Deleting review ${reviewId}`);
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews/${reviewId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('✅ Review deleted successfully!', 'success');
+            loadMyReviews();
+            loadReviewsOverview();
+            loadAllReviews();
+        } else {
+            throw new Error(result.message || 'Failed to delete review');
+        }
+    } catch (error) {
+        console.error('❌ Error deleting review:', error);
+        showNotification('Error: ' + error.message, 'error');
     }
 }
+
+// Mark review as helpful - BACKEND INTEGRATED
+async function markReviewHelpful(reviewId) {
+    console.log(`👍 Marking review ${reviewId} as helpful`);
+    
+    try {
+        const response = await mobileFetch(`${API_BASE}/reviews/${reviewId}/helpful?action=helpful`, {
+            method: 'PUT'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Thanks for your feedback!', 'success');
+            loadAllReviews();
+        } else {
+            throw new Error(result.message || 'Failed to mark review as helpful');
+        }
+    } catch (error) {
+        console.error('❌ Error marking review as helpful:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+
+
 
 // Report review
 function reportReview(reviewId) {
@@ -2301,24 +2591,7 @@ function reportReview(reviewId) {
     }
 }
 
-// Delete user's review
-function deleteMyReview(reviewId) {
-    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
-        return;
-    }
-    
-    console.log(`🗑️ Deleting review ${reviewId}`);
-    
-    const index = mockReviews.findIndex(r => r._id === reviewId);
-    if (index !== -1) {
-        mockReviews.splice(index, 1);
-        saveReviewsToStorage(); // Save changes
-        showNotification('✅ Review deleted successfully!', 'success');
-        loadMyReviews();
-        loadReviewsOverview();
-        loadAllReviews(); // Refresh all reviews section too
-    }
-}
+
 
 // Switch to write review tab
 function switchToWriteReview() {
@@ -2368,9 +2641,8 @@ function getTimeAgo(dateString) {
     return `${Math.floor(diffInSeconds / 31536000)} years ago`;
 }
 
-
 // Load bookings for review - FIXED VERSION
-function loadBookingsForReview() {
+async function loadBookingsForReview() {
     console.log('📝 Loading bookings for review...');
     
     const select = document.getElementById('selectBooking');
@@ -2391,77 +2663,89 @@ function loadBookingsForReview() {
         return;
     }
     
-    // Filter completed bookings that haven't been reviewed yet
-    const reviewableBookings = bookings.filter(booking => 
-        booking.status === 'completed' && !booking.hasReview
-    );
-    
-    console.log(`📝 Found ${reviewableBookings.length} reviewable bookings`);
-    
-    if (reviewableBookings.length === 0) {
-        select.innerHTML = `
-            <option value="">
-                No completed bookings available for review
-            </option>
-        `;
-        document.getElementById('selectedCarInfo').innerHTML = `
-            <div class="no-car-selected">
-                <i class="fas fa-calendar-check"></i>
-                <p>No completed bookings found</p>
-                <small>Complete a rental first to leave a review</small>
-            </div>
-        `;
-        return;
-    }
-    
-    // Populate the dropdown with available bookings
-    reviewableBookings.forEach(booking => {
-        const option = document.createElement('option');
-        option.value = booking._id;
+    try {
+        // Get user's completed bookings that haven't been reviewed
+        const response = await mobileFetch(`${API_BASE}/bookings/my-bookings`);
+        const result = await response.json();
         
-        // Store car data for later use
-        const carData = {
-            _id: booking.car?._id || booking.carId,
-            make: booking.car?.make || 'Car',
-            model: booking.car?.model || '',
-            year: booking.car?.year || new Date().getFullYear(),
-            type: booking.car?.type || 'Vehicle',
-            fuelType: booking.car?.fuelType || 'Petrol',
-            transmission: booking.car?.transmission || 'Manual',
-            images: booking.car?.images || [{ url: getCarImage(booking.car) }]
-        };
-        
-        option.setAttribute('data-car', JSON.stringify(carData));
-        
-        // Format the display text
-        const carName = `${carData.make} ${carData.model}`;
-        const dates = `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`;
-        
-        option.textContent = `${carName} (Rented: ${dates})`;
-        select.appendChild(option);
-    });
-    
-    // Add event listener for selection change
-    select.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        
-        if (selectedOption.value) {
-            const carData = JSON.parse(selectedOption.getAttribute('data-car'));
-            showSelectedCarInfo(carData, selectedOption.value);
-            carForm.style.display = 'block';
-            resetStarRating('car');
+        if (result.success) {
+            const reviewableBookings = result.bookings.filter(booking => 
+                booking.status === 'completed'
+            );
+            
+            console.log(`📝 Found ${reviewableBookings.length} reviewable bookings`);
+            
+            if (reviewableBookings.length === 0) {
+                select.innerHTML = `
+                    <option value="">
+                        No completed bookings available for review
+                    </option>
+                `;
+                document.getElementById('selectedCarInfo').innerHTML = `
+                    <div class="no-car-selected">
+                        <i class="fas fa-calendar-check"></i>
+                        <p>No completed bookings found</p>
+                        <small>Complete a rental first to leave a review</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Populate the dropdown with available bookings
+            reviewableBookings.forEach(booking => {
+                const option = document.createElement('option');
+                option.value = booking._id;
+                
+                // Store car data for later use
+                const carData = {
+                    _id: booking.car?._id || booking.carId,
+                    make: booking.car?.make || 'Car',
+                    model: booking.car?.model || '',
+                    year: booking.car?.year || new Date().getFullYear(),
+                    type: booking.car?.type || 'Vehicle',
+                    fuelType: booking.car?.fuelType || 'Petrol',
+                    transmission: booking.car?.transmission || 'Manual',
+                    images: booking.car?.images || [{ url: getCarImage(booking.car) }]
+                };
+                
+                option.setAttribute('data-car', JSON.stringify(carData));
+                
+                // Format the display text
+                const carName = `${carData.make} ${carData.model}`;
+                const dates = `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`;
+                
+                option.textContent = `${carName} (Rented: ${dates})`;
+                select.appendChild(option);
+            });
+            
+            // Add event listener for selection change
+            select.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                
+                if (selectedOption.value) {
+                    const carData = JSON.parse(selectedOption.getAttribute('data-car'));
+                    showSelectedCarInfo(carData, selectedOption.value);
+                    carForm.style.display = 'block';
+                    resetStarRating('car');
+                } else {
+                    carForm.style.display = 'none';
+                    document.getElementById('selectedCarInfo').innerHTML = `
+                        <div class="no-car-selected">
+                            <i class="fas fa-car"></i>
+                            <p>Please select a booking to review</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            console.log('✅ Bookings dropdown populated successfully');
         } else {
-            carForm.style.display = 'none';
-            document.getElementById('selectedCarInfo').innerHTML = `
-                <div class="no-car-selected">
-                    <i class="fas fa-car"></i>
-                    <p>Please select a booking to review</p>
-                </div>
-            `;
+            throw new Error(result.message || 'Failed to load bookings');
         }
-    });
-    
-    console.log('✅ Bookings dropdown populated successfully');
+    } catch (error) {
+        console.error('❌ Error loading bookings for review:', error);
+        select.innerHTML = '<option value="">Error loading bookings</option>';
+    }
 }
 
 // Setup write review tab
@@ -2623,125 +2907,7 @@ function showReviewForBooking(bookingId) {
     }
 }
 
-// Update the car review submission to track which booking was reviewed
-async function handleCarReview(e) {
-    e.preventDefault();
-    console.log('📝 Handling car review submission...');
-    
-    if (!currentUser) {
-        showNotification('Please login to submit a review', 'warning');
-        showLogin();
-        return;
-    }
-    
-    const rating = document.querySelector('input[name="car-rating"]:checked');
-    const titleInput = document.getElementById('carReviewTitle');
-    const commentInput = document.getElementById('carReviewComment');
-    const carIdInput = document.getElementById('selectedCarId');
-    const bookingIdInput = document.getElementById('selectedBookingId');
-    
-    if (!titleInput || !commentInput) {
-        showNotification('Review form elements not found', 'error');
-        return;
-    }
-    
-    const title = titleInput.value.trim();
-    const comment = commentInput.value.trim();
-    const carId = carIdInput ? carIdInput.value : null;
-    const bookingId = bookingIdInput ? bookingIdInput.value : null;
-    
-    if (!rating) {
-        showNotification('Please select a rating', 'error');
-        return;
-    }
-    
-    if (!title) {
-        showNotification('Please enter a review title', 'error');
-        return;
-    }
-    
-    if (!comment) {
-        showNotification('Please enter your review comments', 'error');
-        return;
-    }
-    
-    if (!carId || !bookingId) {
-        showNotification('Please select a booking to review', 'error');
-        return;
-    }
 
-    try {
-        // Get the correct rating value
-        const selectedRating = parseInt(rating.value);
-        console.log(`⭐ Submitting car review with rating: ${selectedRating}`);
-        
-        // Get car info from the select dropdown
-        const select = document.getElementById('selectBooking');
-        const selectedOption = select ? select.options[select.selectedIndex] : null;
-        let carInfo = { make: 'Unknown', model: 'Car', type: 'Vehicle' };
-        
-        if (selectedOption && selectedOption.getAttribute('data-car')) {
-            carInfo = JSON.parse(selectedOption.getAttribute('data-car'));
-        }
-        
-        // Create new review object with booking reference
-        const newReview = {
-            _id: 'review_' + Date.now(),
-            user: {
-                name: currentUser.name,
-                email: currentUser.email
-            },
-            type: 'car',
-            rating: selectedRating,
-            title: title,
-            comment: comment,
-            car: carInfo,
-            bookingId: bookingId, // Track which booking this review is for
-            status: 'active',
-            helpfulCount: 0,
-            reportCount: 0,
-            isVerified: true,
-            createdAt: new Date().toISOString()
-        };
-        
-        console.log('✅ Creating new car review:', newReview);
-        
-        // Add to mock data
-        mockReviews.unshift(newReview);
-        
-        // Save to localStorage for persistence
-        saveReviewsToStorage();
-        
-        showNotification('✅ Car review submitted successfully!', 'success');
-        
-        // Reset form
-        const carForm = document.getElementById('carReviewFormElement');
-        if (carForm) {
-            carForm.reset();
-            carForm.style.display = 'none';
-        }
-        resetStarRating('car');
-        
-        // Reset select
-        const selectBooking = document.getElementById('selectBooking');
-        if (selectBooking) {
-            selectBooking.value = '';
-        }
-        
-        // Refresh all data
-        loadAllReviews();
-        loadMyReviews();
-        loadReviewsOverview();
-        loadBookingsForReview(); // Refresh the bookings dropdown
-        displayBookings(); // Update bookings display
-        
-        console.log('✅ Car review submitted and saved successfully');
-        
-    } catch (error) {
-        console.error('❌ Error submitting car review:', error);
-        showNotification('Error submitting review. Please try again.', 'error');
-    }
-}
 
 
 // Close reviews page - GO TO INDEX.HTML

@@ -159,4 +159,26 @@ reviewSchema.statics.getWebsiteAverageRating = async function() {
   };
 };
 
+
+// Add this after the schema definition in Review.js
+// Create unique compound index to prevent duplicate reviews
+reviewSchema.index({ 
+    user: 1, 
+    type: 1, 
+    booking: 1 
+}, { 
+    unique: true, 
+    partialFilterExpression: { 
+        type: 'car',
+        booking: { $exists: true }
+    } 
+});
+
+// For website reviews - prevent multiple reviews in short time
+reviewSchema.index({ 
+    user: 1, 
+    type: 1, 
+    createdAt: 1 
+});
+
 module.exports = mongoose.model('Review', reviewSchema);

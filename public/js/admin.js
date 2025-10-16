@@ -158,61 +158,77 @@ function switchTab(tabName) {
     }
 }
 
-// Enhanced fetch with mobile error handling
+// Enhanced fetch with mobile error handling - UPDATED VERSION
 async function mobileFetch(url, options = {}) {
-    try {
-        console.log('📡 Admin API Call:', url);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        const fetchOptions = {
-            ...options,
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                ...options.headers
-            }
-        };
-        
-        const response = await fetch(url, fetchOptions);
-        
-        clearTimeout(timeoutId);
-        
-        if (response.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = 'index.html';
-            throw new Error('Session expired. Please login again.');
-        }
-
-        if (response.status === 403) {
-            throw new Error('Access denied. Admin privileges required.');
-        }
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return response;
-    } catch (error) {
-        console.error('📱 Admin Mobile fetch error:', error);
-        
-        if (error.name === 'AbortError') {
-            throw new Error('Request timeout. Please check your internet connection.');
-        }
-        
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            throw new Error('Network connection failed. Please check your internet and try again.');
-        }
-        
-        throw error;
+  try {
+    console.log('📡 API Call:', url, options.method || 'GET');
+    
+    // Add timeout for mobile networks (15 seconds for slower connections)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
+    const fetchOptions = {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...options.headers
+      }
+    };
+    
+    // Add authorization header if token exists
+    const token = localStorage.getItem('token');
+    if (token && !fetchOptions.headers.Authorization) {
+      fetchOptions.headers.Authorization = `Bearer ${token}`;
     }
+    
+    const response = await fetch(url, fetchOptions);
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        error: errorText
+      });
+      
+      // Try to parse error message from response
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (e) {
+        // If not JSON, use the text as is
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('📱 Mobile fetch error:', error);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout. Please check your internet connection.');
+    }
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('Network connection failed. Please check your internet and try again.');
+    }
+    
+    throw error;
+  }
 }
-
-// Load dashboard statistics
+// Load dashboard statistics - ENHANCED WITH REVIEWS
 async function loadDashboardStats() {
     try {
         console.log('📊 Fetching dashboard statistics...');
@@ -230,6 +246,16 @@ async function loadDashboardStats() {
             document.getElementById('activeBookings').textContent = stats.activeBookings || 0;
             document.getElementById('totalRevenue').textContent = `₹${(stats.totalRevenue || 0).toLocaleString()}`;
             document.getElementById('todaysBookings').textContent = stats.todaysBookings || 0;
+            
+            // Update review stats if available
+            if (stats.totalReviews !== undefined) {
+                console.log('📊 Review stats available:', {
+                    totalReviews: stats.totalReviews,
+                    carReviews: stats.carReviews,
+                    websiteReviews: stats.websiteReviews,
+                    flaggedReviews: stats.flaggedReviews
+                });
+            }
             
             console.log('✅ Dashboard statistics loaded successfully');
         } else {
@@ -2164,11 +2190,14 @@ document.head.insertAdjacentHTML('beforeend', `
 
 
 
-
-
-// Update the displayReviewDetails function for better appearance
+// Display review details with backend data - FIXED VERSION
 function displayReviewDetails(review) {
     const container = document.getElementById('reviewDetailsContent');
+    if (!container) {
+        console.error('❌ Review details container not found');
+        return;
+    }
+    
     const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
     const timeAgo = getTimeAgo(review.createdAt);
     
@@ -2200,10 +2229,6 @@ function displayReviewDetails(review) {
                         <span class="info-label">Email:</span>
                         <span class="info-value">${review.user?.email || 'N/A'}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Phone:</span>
-                        <span class="info-value">${review.user?.phone || 'N/A'}</span>
-                    </div>
                 </div>
             </div>
             
@@ -2230,7 +2255,7 @@ function displayReviewDetails(review) {
                     </div>
                     <div class="info-item">
                         <span class="info-label">Report Count:</span>
-                        <span class="info-value" style="color: ${review.reportCount > 0 ? '#ef4444' : '#059669'}; font-weight: 700;">${review.reportCount}</span>
+                        <span class="info-value" style="color: ${review.reportCount > 0 ? '#ef4444' : '#059669'}; font-weight: 700;">${review.reportCount || 0}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Submitted:</span>
@@ -2279,7 +2304,6 @@ function displayReviewDetails(review) {
                         <div style="color: #374151; font-size: 0.95rem; font-weight: 600;">
                             <div>Year: ${review.car.year} • Type: ${review.car.type}</div>
                             <div>Fuel: ${review.car.fuelType} • Transmission: ${review.car.transmission}</div>
-                            <div>Seats: ${review.car.seats} • Color: ${review.car.color || 'N/A'}</div>
                         </div>
                     </div>
                 </div>
@@ -2303,9 +2327,11 @@ function displayReviewDetails(review) {
         <div class="form-section" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <h4 style="color: #1e293b; margin-bottom: 1.5rem;">Quick Actions</h4>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="verifyReview('${review._id}')" style="padding: 1rem 1.5rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; cursor: pointer; transition: all 0.3s ease;">
-                    <i class="fas fa-check-circle"></i> Verify Review
-                </button>
+                ${!review.isVerified ? `
+                    <button class="btn btn-primary" onclick="verifyReview('${review._id}')" style="padding: 1rem 1.5rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; cursor: pointer; transition: all 0.3s ease;">
+                        <i class="fas fa-check-circle"></i> Verify Review
+                    </button>
+                ` : ''}
                 <button class="btn btn-warning" onclick="addAdminResponse('${review._id}')" style="padding: 1rem 1.5rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; cursor: pointer; transition: all 0.3s ease;">
                     <i class="fas fa-reply"></i> Add Response
                 </button>
@@ -2336,32 +2362,6 @@ function displayReviewDetails(review) {
 
 
 
-// Verify review - FIXED VERSION
-async function verifyReview(reviewId) {
-    try {
-        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/verify`, {
-            method: 'PUT'
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-            showNotification('Review verified successfully!', 'success');
-            closeModal('reviewDetailsModal');
-            loadAdminReviews();
-        } else {
-            throw new Error(result.message || 'Failed to verify review');
-        }
-    } catch (error) {
-        console.error('❌ Error verifying review:', error);
-        showNotification('Error: ' + error.message, 'error');
-    }
-}
 
 // Add admin response - FIXED VERSION
 async function addAdminResponse(reviewId) {
@@ -2397,80 +2397,83 @@ async function addAdminResponse(reviewId) {
 }
 
 
-// Load admin reviews - ENHANCED VERSION
+
+
+
+// Show review details in admin panel - ENHANCED VERSION
+async function showReviewDetails(reviewId) {
+    try {
+        console.log(`📋 Admin: Loading review details for ${reviewId}`);
+        
+        // Get reviews from localStorage
+        const savedReviews = localStorage.getItem('carRentalReviews');
+        if (!savedReviews) {
+            throw new Error('No reviews found in storage');
+        }
+        
+        const reviews = JSON.parse(savedReviews);
+        const review = reviews.find(r => r._id === reviewId);
+        
+        if (!review) {
+            throw new Error('Review not found');
+        }
+        
+        // Ensure review has proper type
+        if (!review.type) {
+            review.type = 'website'; // Set default type for legacy reviews
+        }
+        
+        console.log(`📋 Review Details:`, {
+            id: review._id,
+            type: review.type,
+            user: review.user?.name,
+            title: review.title,
+            rating: review.rating
+        });
+        
+        displayReviewDetails(review);
+        
+    } catch (error) {
+        console.error('❌ Error loading review details:', error);
+        showNotification('Error loading review details: ' + error.message, 'error');
+    }
+}
+
+// Load admin reviews from backend - FIXED VERSION
 async function loadAdminReviews() {
     try {
-        console.log('📝 Admin: Loading reviews...');
+        console.log('📝 Admin: Loading reviews from backend...');
         showLoading('adminReviewsList', 'Loading reviews...');
         
         const typeFilter = document.getElementById('reviewTypeFilterAdmin').value;
         const statusFilter = document.getElementById('reviewStatusFilterAdmin').value;
         const searchQuery = document.getElementById('reviewSearchAdmin').value;
         
-        // Get reviews from the main script's storage
-        let reviews = [];
+        // Build API URL
+        let url = `${API_BASE}/admin/reviews?`;
+        const params = new URLSearchParams();
         
-        // Try to get reviews from localStorage first
-        const savedReviews = localStorage.getItem('carRentalReviews');
-        if (savedReviews) {
-            try {
-                reviews = JSON.parse(savedReviews);
-                console.log(`📝 Admin: Loaded ${reviews.length} reviews from localStorage`);
-                
-                // Log review types for debugging
-                const carReviews = reviews.filter(r => r.type === 'car');
-                const websiteReviews = reviews.filter(r => r.type === 'website' || !r.type);
-                console.log(`📝 Review Types: ${carReviews.length} Car, ${websiteReviews.length} Website`);
-                
-            } catch (error) {
-                console.error('❌ Admin: Error loading reviews from localStorage:', error);
-                reviews = [];
-            }
+        if (typeFilter !== 'all') params.append('type', typeFilter);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        if (searchQuery) params.append('search', searchQuery);
+        params.append('limit', '50');
+        
+        url += params.toString();
+        
+        console.log('📡 Fetching admin reviews from:', url);
+        
+        const response = await mobileFetch(url);
+        const result = await response.json();
+        
+        console.log('📝 Admin reviews API response:', result);
+        
+        if (result.success) {
+            displayAdminReviews(result.reviews, result.stats);
+            updateAdminReviewStats(result.stats);
+            console.log(`✅ Admin: Loaded ${result.reviews.length} reviews from backend`);
+        } else {
+            throw new Error(result.message || 'Failed to load reviews');
         }
-        
-        // Filter reviews
-        let filteredReviews = [...reviews];
-        
-        if (typeFilter !== 'all') {
-            if (typeFilter === 'car') {
-                filteredReviews = filteredReviews.filter(review => review.type === 'car');
-            } else if (typeFilter === 'website') {
-                // Include both 'website' type and reviews without type (legacy)
-                filteredReviews = filteredReviews.filter(review => 
-                    review.type === 'website' || !review.type
-                );
-            }
-        }
-        
-        if (statusFilter !== 'all') {
-            filteredReviews = filteredReviews.filter(review => 
-                (review.status || 'active') === statusFilter
-            );
-        }
-        
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            filteredReviews = filteredReviews.filter(review => 
-                (review.user?.name || '').toLowerCase().includes(query) ||
-                (review.user?.email || '').toLowerCase().includes(query) ||
-                (review.title || '').toLowerCase().includes(query) ||
-                (review.comment || '').toLowerCase().includes(query) ||
-                (review.car?.make || '').toLowerCase().includes(query) ||
-                (review.car?.model || '').toLowerCase().includes(query)
-            );
-        }
-        
-        // Calculate stats
-        const stats = {
-            total: reviews.length,
-            car: reviews.filter(r => r.type === 'car').length,
-            website: reviews.filter(r => r.type === 'website' || !r.type).length,
-            flagged: reviews.filter(r => (r.reportCount || 0) > 0).length
-        };
-        
-        displayAdminReviews(filteredReviews, stats);
-        console.log(`✅ Admin: Loaded ${filteredReviews.length} filtered reviews`);
-        
     } catch (error) {
         console.error('❌ Error loading admin reviews:', error);
         showNotification('Error loading reviews: ' + error.message, 'error');
@@ -2485,22 +2488,51 @@ async function loadAdminReviews() {
     }
 }
 
-// Display admin reviews - FIXED VERSION
+// Update admin review statistics - NEW FUNCTION
+function updateAdminReviewStats(stats) {
+    console.log('📊 Updating admin review stats:', stats);
+    
+    // Calculate totals from stats array
+    let totalReviews = 0;
+    let carReviews = 0;
+    let websiteReviews = 0;
+    let flaggedReviews = 0;
+
+    if (stats && Array.isArray(stats)) {
+        stats.forEach(stat => {
+            totalReviews += stat.total || 0;
+            if (stat._id === 'car') {
+                carReviews = stat.total || 0;
+                flaggedReviews += stat.flagged || 0;
+            } else if (stat._id === 'website') {
+                websiteReviews = stat.total || 0;
+                flaggedReviews += stat.flagged || 0;
+            }
+        });
+    }
+
+    // Update the UI elements
+    const totalReviewsElem = document.getElementById('totalReviewsAdmin');
+    const carReviewsElem = document.getElementById('carReviewsAdmin');
+    const websiteReviewsElem = document.getElementById('websiteReviewsAdmin');
+    const flaggedReviewsElem = document.getElementById('flaggedReviewsAdmin');
+    
+    if (totalReviewsElem) totalReviewsElem.textContent = totalReviews;
+    if (carReviewsElem) carReviewsElem.textContent = carReviews;
+    if (websiteReviewsElem) websiteReviewsElem.textContent = websiteReviews;
+    if (flaggedReviewsElem) flaggedReviewsElem.textContent = flaggedReviews;
+
+    console.log(`📊 Admin Review Stats - Total: ${totalReviews}, Car: ${carReviews}, Website: ${websiteReviews}, Flagged: ${flaggedReviews}`);
+}
+
+// Display admin reviews - SHOW BOTH ACTIVE AND TOTAL COUNTS
 function displayAdminReviews(reviews, stats) {
     const container = document.getElementById('adminReviewsList');
     if (!container) return;
     
     // Update statistics
     if (stats) {
-        const totalReviewsElem = document.getElementById('totalReviewsAdmin');
-        const carReviewsElem = document.getElementById('carReviewsAdmin');
-        const websiteReviewsElem = document.getElementById('websiteReviewsAdmin');
-        const flaggedReviewsElem = document.getElementById('flaggedReviewsAdmin');
-        
-        if (totalReviewsElem) totalReviewsElem.textContent = stats.total || 0;
-        if (carReviewsElem) carReviewsElem.textContent = stats.car || 0;
-        if (websiteReviewsElem) websiteReviewsElem.textContent = stats.website || 0;
-        if (flaggedReviewsElem) flaggedReviewsElem.textContent = stats.flagged || 0;
+        updateAdminReviewStats(stats);
     }
     
     if (!reviews || reviews.length === 0) {
@@ -2513,6 +2545,10 @@ function displayAdminReviews(reviews, stats) {
         `;
         return;
     }
+    
+    // Count active vs total reviews for display
+    const activeReviews = reviews.filter(review => review.status === 'active').length;
+    const totalReviews = reviews.length;
     
     container.innerHTML = `
         <div style="overflow-x: auto;">
@@ -2535,8 +2571,8 @@ function displayAdminReviews(reviews, stats) {
                         const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
                         const timeAgo = getTimeAgo(review.createdAt);
                         
-                        // Determine review type with proper display
-                        const reviewType = review.type || 'website'; // Default to website if not specified
+                        // Determine review type
+                        const reviewType = review.type || 'website';
                         const typeDisplay = reviewType === 'car' ? 'Car Review' : 'Website Review';
                         const typeIcon = reviewType === 'car' ? 'fas fa-car' : 'fas fa-globe';
                         const typeBadgeClass = reviewType === 'car' ? 'car' : 'website';
@@ -2599,7 +2635,7 @@ function displayAdminReviews(reviews, stats) {
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="btn-view" onclick="showReviewDetails('${review._id}')" title="View Details">
+                                        <button class="btn-view" onclick="showAdminReviewDetails('${review._id}')" title="View Details">
                                             <i class="fas fa-eye"></i> View
                                         </button>
                                         <select class="status-select" onchange="updateReviewStatus('${review._id}', this.value)" title="Change Status">
@@ -2618,114 +2654,138 @@ function displayAdminReviews(reviews, stats) {
         </div>
         <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
             Showing ${reviews.length} reviews • 
-            ${stats?.car || 0} Car Reviews • 
-            ${stats?.website || 0} Website Reviews •
-            ${stats?.flagged || 0} Flagged Reviews
+            <strong>${activeReviews} Active</strong> • 
+            ${totalReviews - activeReviews} Inactive
         </div>
     `;
 }
-
-// Show review details in admin panel - ENHANCED VERSION
-async function showReviewDetails(reviewId) {
+// Show review details in admin panel - FIXED BACKEND VERSION
+async function showAdminReviewDetails(reviewId) {
     try {
         console.log(`📋 Admin: Loading review details for ${reviewId}`);
         
-        // Get reviews from localStorage
-        const savedReviews = localStorage.getItem('carRentalReviews');
-        if (!savedReviews) {
-            throw new Error('No reviews found in storage');
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}`);
+        const result = await response.json();
+        
+        console.log('📋 Review details response:', result);
+        
+        if (result.success) {
+            displayReviewDetails(result.review);
+        } else {
+            throw new Error(result.message || 'Failed to load review details');
         }
-        
-        const reviews = JSON.parse(savedReviews);
-        const review = reviews.find(r => r._id === reviewId);
-        
-        if (!review) {
-            throw new Error('Review not found');
-        }
-        
-        // Ensure review has proper type
-        if (!review.type) {
-            review.type = 'website'; // Set default type for legacy reviews
-        }
-        
-        console.log(`📋 Review Details:`, {
-            id: review._id,
-            type: review.type,
-            user: review.user?.name,
-            title: review.title,
-            rating: review.rating
-        });
-        
-        displayReviewDetails(review);
-        
     } catch (error) {
         console.error('❌ Error loading review details:', error);
         showNotification('Error loading review details: ' + error.message, 'error');
     }
 }
-// Update review status in admin panel
+
+// Update review status - FIXED BACKEND VERSION
 async function updateReviewStatus(reviewId, status) {
     if (!status || status === '') return;
     
+    if (!confirm(`Are you sure you want to change review status to ${status}?`)) {
+        return;
+    }
+
     try {
-        // Get reviews from localStorage
-        const savedReviews = localStorage.getItem('carRentalReviews');
-        if (!savedReviews) {
-            throw new Error('No reviews found');
+        console.log(`🔄 Admin: Updating review ${reviewId} status to ${status}`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(`Review status updated to ${status} successfully!`, 'success');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message || 'Failed to update review status');
         }
-        
-        const reviews = JSON.parse(savedReviews);
-        const reviewIndex = reviews.findIndex(r => r._id === reviewId);
-        
-        if (reviewIndex === -1) {
-            throw new Error('Review not found');
-        }
-        
-        // Update review status
-        reviews[reviewIndex].status = status;
-        
-        // Save back to localStorage
-        localStorage.setItem('carRentalReviews', JSON.stringify(reviews));
-        
-        showNotification(`Review status updated to ${status} successfully!`, 'success');
-        loadAdminReviews();
-        
     } catch (error) {
         console.error('❌ Error updating review status:', error);
         showNotification('Error: ' + error.message, 'error');
     }
 }
 
-// Delete review from admin panel
+// Verify review - FIXED BACKEND VERSION
+async function verifyReview(reviewId) {
+    try {
+        console.log(`✅ Admin: Verifying review ${reviewId}`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/verify`, {
+            method: 'PUT'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Review verified successfully!', 'success');
+            closeModal('reviewDetailsModal');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message || 'Failed to verify review');
+        }
+    } catch (error) {
+        console.error('❌ Error verifying review:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Add admin response - FIXED BACKEND VERSION
+async function addAdminResponse(reviewId) {
+    const responseText = prompt('Enter your response to this review:');
+    if (!responseText) return;
+    
+    try {
+        console.log(`💬 Admin: Adding response to review ${reviewId}`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ 
+                adminResponse: responseText
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Admin response added successfully!', 'success');
+            closeModal('reviewDetailsModal');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message || 'Failed to add admin response');
+        }
+    } catch (error) {
+        console.error('❌ Error adding admin response:', error);
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+// Delete review from admin panel - FIXED BACKEND VERSION
 async function deleteAdminReview(reviewId) {
     if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
         return;
     }
 
     try {
-        // Get reviews from localStorage
-        const savedReviews = localStorage.getItem('carRentalReviews');
-        if (!savedReviews) {
-            throw new Error('No reviews found');
+        console.log(`🗑️ Admin: Deleting review ${reviewId}`);
+        
+        const response = await mobileFetch(`${API_BASE}/admin/reviews/${reviewId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Review deleted successfully!', 'success');
+            closeModal('reviewDetailsModal');
+            loadAdminReviews();
+        } else {
+            throw new Error(result.message || 'Failed to delete review');
         }
-        
-        const reviews = JSON.parse(savedReviews);
-        const reviewIndex = reviews.findIndex(r => r._id === reviewId);
-        
-        if (reviewIndex === -1) {
-            throw new Error('Review not found');
-        }
-        
-        // Remove review
-        reviews.splice(reviewIndex, 1);
-        
-        // Save back to localStorage
-        localStorage.setItem('carRentalReviews', JSON.stringify(reviews));
-        
-        showNotification('Review deleted successfully!', 'success');
-        closeModal('reviewDetailsModal');
-        loadAdminReviews();
-        
     } catch (error) {
         console.error('❌ Error deleting review:', error);
         showNotification('Error: ' + error.message, 'error');

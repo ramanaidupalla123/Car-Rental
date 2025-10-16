@@ -4,7 +4,10 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+
+
 const app = express();
+
 
 // Middleware
 app.use(cors());
@@ -17,7 +20,6 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/cars', require('./routes/cars'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/admin', require('./routes/admin'));
-// Add this with other route imports
 app.use('/api/reviews', require('./routes/reviews'));
 
 // Health check

@@ -3,25 +3,64 @@ const Booking = require('../models/Booking');
 const Car = require('../models/Car');
 const { validationResult } = require('express-validator');
 
-// Create new review
 exports.createReview = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
+    console.log('📝 Creating new review...', req.body);
+    console.log('👤 User ID:', req.user.id);
     const { type, rating, title, comment, bookingId, carId } = req.body;
 
+    // Validate required fields
+    if (!type || !rating || !title || !comment) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type, rating, title, and comment are required fields'
+      });
+    }
+    // DEBUG: Log all received fields
+    console.log('📋 Received review data:', {
+      type,
+      rating,
+      title,
+      comment,
+      bookingId,
+      carId,
+      user: req.user.id
+    });
+
+    // Validate required fields
+    if (!type || !rating || !title || !comment) {
+      console.log('❌ Missing required fields');
+      return res.status(400).json({
+        success: false,
+        message: 'Type, rating, title, and comment are required fields'
+      });
+    }
     // Validate rating
     if (rating < 1 || rating > 5) {
       return res.status(400).json({
         success: false,
         message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    // Check for duplicate submission (same user, same content within last 5 minutes)
+    const fiveMinutesAgo = new Date();
+    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+
+    const duplicateReview = await Review.findOne({
+      user: req.user.id,
+      type: type,
+      title: title,
+      comment: comment,
+      rating: rating,
+      createdAt: { $gte: fiveMinutesAgo }
+    });
+
+    if (duplicateReview) {
+      console.log('⚠️ Duplicate review submission detected');
+      return res.status(400).json({
+        success: false,
+        message: 'Duplicate review submission detected. Please wait a few minutes before submitting again.'
       });
     }
 
@@ -34,20 +73,20 @@ exports.createReview = async (req, res) => {
         });
       }
 
+      // Check if booking exists and belongs to user
       const booking = await Booking.findOne({
         _id: bookingId,
-        user: req.user.id,
-        status: 'completed'
+        user: req.user.id
       });
 
       if (!booking) {
         return res.status(400).json({
           success: false,
-          message: 'No completed booking found for this user and car'
+          message: 'No booking found for this user'
         });
       }
 
-      // Check if user already reviewed this booking
+      // Check if user already reviewed this booking (only for car reviews)
       const existingReview = await Review.findOne({
         user: req.user.id,
         booking: bookingId,
@@ -62,21 +101,22 @@ exports.createReview = async (req, res) => {
       }
     }
 
-    // For website reviews, check if user reviewed recently (limit 1 per month)
+    // For website reviews, check if user submitted too many recently (prevent spam)
     if (type === 'website') {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-      const recentReview = await Review.findOne({
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      
+      const recentWebsiteReviews = await Review.countDocuments({
         user: req.user.id,
         type: 'website',
-        createdAt: { $gte: oneMonthAgo }
+        createdAt: { $gte: oneDayAgo }
       });
 
-      if (recentReview) {
+      // Allow up to 3 website reviews per day to prevent spam
+      if (recentWebsiteReviews >= 3) {
         return res.status(400).json({
           success: false,
-          message: 'You can only submit one website review per month'
+          message: 'You have reached the daily limit for website reviews. Please try again tomorrow.'
         });
       }
     }
@@ -85,7 +125,7 @@ exports.createReview = async (req, res) => {
     const reviewData = {
       user: req.user.id,
       type,
-      rating,
+      rating: parseInt(rating),
       title,
       comment
     };
@@ -95,10 +135,12 @@ exports.createReview = async (req, res) => {
       reviewData.car = carId;
     }
 
+    console.log('📝 Creating review with data:', reviewData);
+    
     const review = await Review.create(reviewData);
 
     // Populate user details for response
-    await review.populate('user', 'name avatar');
+    await review.populate('user', 'name');
 
     // Update booking hasReview flag for car reviews
     if (type === 'car') {
@@ -108,6 +150,8 @@ exports.createReview = async (req, res) => {
       await updateCarRatings(carId);
     }
 
+    console.log('✅ Review created successfully:', review._id);
+
     res.status(201).json({
       success: true,
       message: 'Review submitted successfully',
@@ -115,16 +159,33 @@ exports.createReview = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create review error:', error);
+    console.error('❌ Create review error:', error);
+    
+    // Handle duplicate key errors (MongoDB unique constraint violations)
+    if (error.code === 11000) {
+      // Check if it's a car review duplicate
+      if (error.keyPattern && error.keyPattern.booking) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already reviewed this booking.'
+        });
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Duplicate review detected. Please wait a few minutes before submitting again.'
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Error creating review',
+      message: 'Error creating review: ' + error.message,
       error: error.message
     });
   }
 };
 
-// Get reviews with filters
+// Get reviews with filters - FIXED VERSION (show all active reviews to users)
 exports.getReviews = async (req, res) => {
   try {
     const {
@@ -137,10 +198,10 @@ exports.getReviews = async (req, res) => {
       verified
     } = req.query;
 
-    // Build filter object
+    // Build filter object - Only show active reviews to users
     let filter = { status: 'active' };
     
-    if (type) filter.type = type;
+    if (type && type !== 'all') filter.type = type;
     if (carId) filter.car = carId;
     if (rating) filter.rating = parseInt(rating);
     if (verified !== undefined) filter.isVerified = verified === 'true';
@@ -176,14 +237,42 @@ exports.getReviews = async (req, res) => {
 
     const total = await Review.countDocuments(filter);
 
-    // Get average ratings
+    // Get average ratings from ACTIVE reviews only
     let averageRatings = {};
+    const activeReviewsFilter = { status: 'active' };
+    
     if (type === 'car' && carId) {
+      activeReviewsFilter.type = 'car';
+      activeReviewsFilter.car = carId;
       averageRatings = await Review.getCarAverageRating(carId);
     } else if (type === 'website') {
+      activeReviewsFilter.type = 'website';
       averageRatings = await Review.getWebsiteAverageRating();
+    } else {
+      // Get overall average from all active reviews
+      const overallStats = await Review.aggregate([
+        {
+          $match: { status: 'active' }
+        },
+        {
+          $group: {
+            _id: null,
+            averageRating: { $avg: '$rating' },
+            totalReviews: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      if (overallStats.length > 0) {
+        averageRatings = {
+          averageRating: Math.round(overallStats[0].averageRating * 10) / 10,
+          totalReviews: overallStats[0].totalReviews
+        };
+      }
     }
 
+    console.log(`📝 User Reviews API: Found ${reviews.length} active reviews, Total: ${total}`);
+    
     res.json({
       success: true,
       count: reviews.length,

@@ -6,7 +6,7 @@ const User = require('../models/User');
 const Car = require('../models/Car');
 const Review = require('../models/Review'); // ADD THIS IMPORT
 
-// Get dashboard statistics
+// Get dashboard statistics - FIXED REVIEW COUNTS
 router.get('/stats', auth, admin, async (req, res) => {
   try {
     console.log('📊 Admin: Fetching statistics...');
@@ -39,13 +39,19 @@ router.get('/stats', auth, admin, async (req, res) => {
     const totalCars = await Car.countDocuments();
     const availableCars = await Car.countDocuments({ available: true });
 
-    // Reviews statistics
-    const totalReviews = await Review.countDocuments();
-    const carReviews = await Review.countDocuments({ type: 'car' });
-    const websiteReviews = await Review.countDocuments({ type: 'website' });
+    // Reviews statistics - COUNT ONLY ACTIVE REVIEWS (to match user view)
+    const totalReviews = await Review.countDocuments({ status: 'active' });
+    const carReviews = await Review.countDocuments({ type: 'car', status: 'active' });
+    const websiteReviews = await Review.countDocuments({ type: 'website', status: 'active' });
     const flaggedReviews = await Review.countDocuments({ status: 'flagged' });
 
     console.log('✅ Admin: Statistics loaded successfully');
+    console.log('📊 Review Stats - Active Reviews:', {
+      total: totalReviews,
+      car: carReviews,
+      website: websiteReviews,
+      flagged: flaggedReviews
+    });
 
     res.json({
       success: true,
