@@ -110,6 +110,7 @@ function initializeApp() {
     initializeMobileNavigation();
     addNotificationStyles();
     initializeMobileFeatures();
+    initializeCleanSearch();
 }
 
 // Add mobile-specific features
@@ -2923,3 +2924,225 @@ function goBackToHome() {
 }
 
 console.log('✅ Naidu Car Rentals Frontend loaded successfully!');
+
+// Clean Search Functions - FIXED VERSION
+function performSearch() {
+    console.log('🔍 Search button clicked');
+    
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput.value.trim();
+    
+    if (!searchTerm) {
+        showNotification('Please enter a car name to search', 'warning');
+        searchInput.focus();
+        return;
+    }
+    
+    // Basic validation
+    if (searchTerm.length < 2) {
+        showNotification('Please enter at least 2 characters', 'warning');
+        return;
+    }
+    
+    // Disable search button temporarily
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+        const searchIcon = searchBtn.innerHTML;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        searchBtn.disabled = true;
+        
+        // Add loading state
+        const searchContainer = document.querySelector('.search-container-clean');
+        if (searchContainer) {
+            searchContainer.classList.add('search-loading-clean');
+        }
+    }
+    
+    // Show searching notification
+    showNotification(`Searching for "${searchTerm}"...`, 'info');
+    
+    // Wait for 500ms to show loading state, then redirect
+    setTimeout(() => {
+        const encodedTerm = encodeURIComponent(searchTerm);
+        console.log(`Redirecting to search results with query: ${encodedTerm}`);
+        
+        // Redirect to search results page
+        window.location.href = `search-results.html?q=${encodedTerm}`;
+        
+        // Note: These won't execute because page navigates away
+    }, 600);
+}
+
+// REMOVE THIS FUNCTION - We don't want Enter key to trigger search
+// function handleSearchKeyPress(event) {
+//     if (event.key === 'Enter') {
+//         event.preventDefault();
+//         performSearch();
+//     }
+// }
+
+function setupVoiceSearchClean() {
+    const voiceBtn = document.getElementById('voiceSearchBtn');
+    if (!voiceBtn) return;
+    
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-IN';
+        
+        voiceBtn.addEventListener('click', function() {
+            if (voiceBtn.classList.contains('listening')) {
+                recognition.stop();
+                voiceBtn.classList.remove('listening');
+                showNotification('Voice search stopped', 'info');
+                return;
+            }
+            
+            recognition.start();
+            voiceBtn.classList.add('listening');
+            showNotification('🎤 Listening... Speak now', 'info');
+        });
+        
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = transcript;
+            voiceBtn.classList.remove('listening');
+            
+            // Auto-focus and select text
+            searchInput.focus();
+            searchInput.select();
+            
+            showNotification(`✅ Heard: "${transcript}"`, 'success');
+            
+            // IMPORTANT: Voice search DOES NOT auto-submit
+            // User must click the search button to search
+        };
+        
+        recognition.onerror = function(event) {
+            console.error('Voice recognition error:', event.error);
+            voiceBtn.classList.remove('listening');
+            
+            let errorMessage = 'Voice recognition failed';
+            if (event.error === 'no-speech') {
+                errorMessage = 'No speech detected';
+            } else if (event.error === 'audio-capture') {
+                errorMessage = 'No microphone found';
+            } else if (event.error === 'not-allowed') {
+                errorMessage = 'Microphone access denied';
+            }
+            
+            showNotification('❌ ' + errorMessage, 'error');
+        };
+        
+        recognition.onend = function() {
+            voiceBtn.classList.remove('listening');
+        };
+    } else {
+        voiceBtn.style.display = 'none';
+    }
+}
+
+function initializeCleanSearch() {
+    console.log('🔍 Initializing clean search (button only)...');
+    
+    // Setup voice search
+    setupVoiceSearchClean();
+    
+    // Add clear button functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        // Create clear button
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'clear-btn-clean';
+        clearBtn.innerHTML = '<i class="fas fa-times"></i>';
+        clearBtn.type = 'button';
+        clearBtn.title = 'Clear search';
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.focus();
+            this.style.opacity = '0';
+            this.style.visibility = 'hidden';
+        });
+        
+        // Insert clear button after input
+        const searchContainer = document.querySelector('.search-container-clean');
+        if (searchContainer) {
+            searchContainer.appendChild(clearBtn);
+        }
+        
+        // Show/hide clear button
+        searchInput.addEventListener('input', function() {
+            if (clearBtn) {
+                clearBtn.style.opacity = this.value ? '1' : '0';
+                clearBtn.style.visibility = this.value ? 'visible' : 'hidden';
+            }
+        });
+        
+        // REMOVE Enter key event listener - Only button click works
+        searchInput.addEventListener('keydown', function(event) {
+            // Prevent Enter key from doing anything in search
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                event.stopPropagation();
+                // Do nothing - search only on button click
+                showNotification('Click the search button to search', 'info');
+            }
+        });
+        
+        // Add focus effects
+        searchInput.addEventListener('focus', function() {
+            const parent = this.parentElement;
+            if (parent) {
+                parent.style.borderColor = 'var(--green)';
+                parent.style.boxShadow = '0 10px 40px rgba(100, 255, 218, 0.2)';
+            }
+        });
+        
+        searchInput.addEventListener('blur', function() {
+            const parent = this.parentElement;
+            if (parent && !this.value) {
+                parent.style.borderColor = '#e2e8f0';
+                parent.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.12)';
+            }
+        });
+    }
+    
+    // Add keyboard shortcut for focusing only (not searching)
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+K to focus search (but not search)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+        
+        // Escape to clear search
+        if (e.key === 'Escape') {
+            const searchInput = document.getElementById('searchInput');
+            if (document.activeElement === searchInput && searchInput.value) {
+                searchInput.value = '';
+                const clearBtn = document.querySelector('.clear-btn-clean');
+                if (clearBtn) {
+                    clearBtn.style.opacity = '0';
+                    clearBtn.style.visibility = 'hidden';
+                }
+            }
+        }
+    });
+    
+    console.log('✅ Clean search initialized - Search only on button click');
+}
+
+// Test function to show it works
+function testSearch() {
+    console.log('Test: Typing in search box...');
+    console.log('This will NOT trigger search');
+    console.log('Only clicking the green search button will trigger search');
+}
