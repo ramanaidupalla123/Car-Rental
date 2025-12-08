@@ -1,1 +1,362 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - Car Rentals</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/search-results.css">
+    <style>
+        /* Additional inline styles for better visibility */
+        .dark-text {
+            color: #2c3e50 !important;
+        }
+        
+        .darker-text {
+            color: #1a252f !important;
+        }
+        
+        .enhanced-contrast {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 5px solid #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="background-animation">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="nav-container">
+            <a href="index.html" class="logo">
+                <i class="fas fa-car"></i>
+                Car Rentals
+            </a>
+            
+            <nav class="nav-links desktop-nav">
+                <a href="index.html#home">Home</a>
+                <a href="index.html#about">About</a>
+                <a href="index.html#cars">Cars</a>
+                <a href="index.html#bookings">My Bookings</a>
+                <a href="index.html#reviews">Reviews & Ratings</a>
+                <div class="search-box-nav">
+                    <input type="text" id="searchInputNav" placeholder="Search cars...">
+                    <button onclick="searchFromNav()"><i class="fas fa-search"></i></button>
+                </div>
+            </nav>
+
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Search Header -->
+    <section class="search-header">
+        <div class="container">
+            <div class="search-header-content">
+                <a href="index.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                <div class="search-box-main">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="searchQuery" placeholder="Search for cars like 'Toyota Fortuner', 'Maruti Dzire'...">
+                        <div class="search-icons">
+                            <button id="voiceSearchBtn" class="voice-btn" title="Voice Search">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button onclick="performSearch()" class="search-btn">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                    <div class="search-hints">
+                        <span class="hint-text">Try: </span>
+                        <button class="hint-btn" onclick="searchSuggestion('Toyota Fortuner')">Toyota Fortuner</button>
+                        <button class="hint-btn" onclick="searchSuggestion('Maruti Suzuki Dzire')">Maruti Dzire</button>
+                        <button class="hint-btn" onclick="searchSuggestion('Hyundai Creta')">Hyundai Creta</button>
+                        <button class="hint-btn" onclick="searchSuggestion('Mahindra Thar')">Mahindra Thar</button>
+                    </div>
+                </div>
+                <div id="searchInfo">
+                    <div class="car-badge" id="carBadge">
+                        <i class="fas fa-car"></i>
+                        <span id="searchTerm" class="darker-text">Searching...</span>
+                    </div>
+                    <p id="resultsCount" class="dark-text">Fetching real-time information...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="search-results-container">
+        <div class="container">
+            <!-- Information Section -->
+            <section class="info-section" id="infoSection">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2 class="darker-text"><i class="fas fa-info-circle"></i> Complete Car Details</h2>
+                        <span class="ai-badge">
+                            <i class="fas fa-robot"></i> Live AI Information
+                        </span>
+                    </div>
+                    <div class="section-actions">
+                        <button class="btn-action refresh-btn" onclick="refreshInformation()" title="Refresh Info">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <div class="info-actions">
+                            <button class="btn-action" onclick="copyAllInfo()" title="Copy All">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="btn-action" onclick="speakInfo()" title="Listen">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <button class="btn-action" onclick="downloadPDF()" title="Download PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-content">
+                    <div class="loading-spinner" id="infoLoading">
+                        <div class="spinner">
+                            <i class="fas fa-car fa-spin"></i>
+                        </div>
+                        <div class="loading-text">
+                            <h4 class="darker-text">Fetching Real-time Car Information</h4>
+                            <p class="dark-text">Getting latest details from DeepSeek AI...</p>
+                            <div class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="informationContent" style="display: none;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    
+                    <div id="infoError" class="error-message" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h4 class="darker-text">Unable to Fetch Information</h4>
+                        <p class="dark-text">We couldn't retrieve car information at the moment.</p>
+                        <button class="btn btn-primary" onclick="retryInformation()">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                    
+                    <div id="noCarFound" class="error-message" style="display: none;">
+                        <i class="fas fa-car-crash"></i>
+                        <h4 class="darker-text">No Car Information Found</h4>
+                        <p class="dark-text">We couldn't find information for "<span id="invalidSearchTerm"></span>"</p>
+                        <div class="suggestions-box">
+                            <p class="dark-text">Did you mean:</p>
+                            <div class="suggestions-list">
+                                <!-- Suggestions will be added by JS -->
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="goBackToSearch()">
+                            <i class="fas fa-search"></i> Search Again
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Images Section -->
+            <section class="images-section" id="imagesSection">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2 class="darker-text"><i class="fas fa-images"></i> High-Quality Images</h2>
+                        <span class="source-badge">
+                            <i class="fab fa-google"></i> Google Images
+                        </span>
+                    </div>
+                    <div class="section-actions">
+                        <div class="image-quality">
+                            <span class="dark-text">Quality:</span>
+                            <select id="imageQualityFilter">
+                                <option value="hd">HD Images</option>
+                                <option value="fullhd">Full HD</option>
+                                <option value="4k">4K (If Available)</option>
+                            </select>
+                        </div>
+                        <div class="image-actions">
+                            <button class="btn-action" onclick="downloadAllImages()" title="Download All">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn-action" onclick="toggleViewMode()" title="Toggle View">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                            <button class="btn-action" onclick="fullscreenGallery()" title="Fullscreen">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="images-content">
+                    <div class="loading-spinner" id="imagesLoading">
+                        <div class="spinner">
+                            <i class="fas fa-image fa-spin"></i>
+                        </div>
+                        <div class="loading-text">
+                            <h4 class="darker-text">Searching for HD Images</h4>
+                            <p class="dark-text">Fetching high-quality images from Google...</p>
+                            <div class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="image-gallery" id="imageGallery" style="display: none;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    
+                    <div id="imagesError" class="error-message" style="display: none;">
+                        <i class="fas fa-image"></i>
+                        <h4 class="darker-text">Images Not Available</h4>
+                        <p class="dark-text">We couldn't fetch images for this car at the moment.</p>
+                        <button class="btn btn-primary" onclick="retryImages()">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                    
+                    <div id="noImagesFound" class="error-message" style="display: none;">
+                        <i class="fas fa-images"></i>
+                        <h4 class="darker-text">No Images Found</h4>
+                        <p class="dark-text">Could not find images for "<span id="imageSearchTerm"></span>"</p>
+                        <button class="btn btn-primary" onclick="searchAlternativeImages()">
+                            <i class="fas fa-search"></i> Search Similar Cars
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="image-info-bar">
+                    <div class="image-stats">
+                        <span class="dark-text"><i class="fas fa-images"></i> <span id="totalImages">0</span> images found</span>
+                        <span class="dark-text"><i class="fas fa-clock"></i> Last updated: <span id="lastUpdated">Just now</span></span>
+                    </div>
+                    <div class="image-sources">
+                        <span class="dark-text">Sources: Google Images • Car Manufacturers • Auto Portals</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Similar Cars Section -->
+            <section class="similar-cars-section" id="similarCarsSection" style="display: none;">
+                <h3 class="darker-text"><i class="fas fa-car-side"></i> Similar Cars You Might Like</h3>
+                <div class="similar-cars-grid" id="similarCarsGrid">
+                    <!-- Will be populated by JS -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Image Viewer Modal -->
+    <div id="imageViewerModal" class="modal">
+        <div class="modal-content image-viewer">
+            <span class="close" onclick="closeImageViewer()">&times;</span>
+            <div class="image-viewer-content">
+                <div class="image-container">
+                    <img id="fullSizeImage" src="" alt="Full Size Image" onerror="handleImageError(this)">
+                    <div class="image-loader" id="imageLoader">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span class="dark-text">Loading HD Image...</span>
+                    </div>
+                </div>
+                <div class="image-details">
+                    <h4 id="fullImageTitle" class="darker-text"></h4>
+                    <div class="image-meta">
+                        <span class="dark-text"><i class="fas fa-camera"></i> <span id="fullImageSource"></span></span>
+                        <span class="dark-text"><i class="fas fa-expand-alt"></i> <span id="fullImageSize"></span></span>
+                        <span class="dark-text"><i class="fas fa-calendar"></i> <span id="fullImageDate"></span></span>
+                    </div>
+                    <div class="image-actions">
+                        <button class="btn btn-primary" onclick="downloadCurrentImage()">
+                            <i class="fas fa-download"></i> Download HD
+                        </button>
+                        <button class="btn btn-secondary" onclick="shareImage()">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Search Modal -->
+    <div id="voiceModal" class="modal">
+        <div class="modal-content voice-modal">
+            <div class="voice-content">
+                <div class="voice-icon" id="voiceIcon">
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <h3 class="darker-text">Speak Now</h3>
+                <p id="voiceText" class="dark-text">Say something like "Toyota Fortuner" or "SUV cars"</p>
+                <div class="voice-examples">
+                    <p class="dark-text">Try saying:</p>
+                    <div class="example-chips">
+                        <span class="dark-text">"Toyota Fortuner"</span>
+                        <span class="dark-text">"Maruti Dzire"</span>
+                        <span class="dark-text">"Hyundai Creta"</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="stopVoiceSearch()">
+                    <i class="fas fa-stop"></i> Stop Listening
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="darker-text"><i class="fas fa-car"></i> Car Rentals</h3>
+                    <p class="dark-text">Real-time car information & HD images powered by AI</p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="darker-text">Data Sources</h4>
+                    <ul>
+                        <li class="dark-text"><i class="fas fa-robot"></i> DeepSeek AI</li>
+                        <li class="dark-text"><i class="fab fa-google"></i> Google Images</li>
+                        <li class="dark-text"><i class="fas fa-database"></i> Live Car Data</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="dark-text">&copy; 2024 Car Rentals. Car information is updated in real-time.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span id="toastMessage" class="dark-text"></span>
+        </div>
+    </div>
+
+    <script src="js/search-results.js"></script>
+</body>
+</html>
