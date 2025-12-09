@@ -3196,5 +3196,4 @@ window.addEventListener('load', function() {
         }
     }
 });
-
 console.log('✅ Naidu Car Rentals Frontend loaded successfully!');
