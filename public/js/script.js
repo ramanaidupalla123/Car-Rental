@@ -111,6 +111,7 @@ function initializeApp() {
     addNotificationStyles();
     initializeMobileFeatures();
     initializeCleanSearch();
+    clearSearchInputOnLoad();
 }
 
 // Add mobile-specific features
@@ -3046,14 +3047,53 @@ function setupVoiceSearchClean() {
     }
 }
 
+
+// Test function to show it works
+function testSearch() {
+    console.log('Test: Typing in search box...');
+    console.log('This will NOT trigger search');
+    console.log('Only clicking the green search button will trigger search');
+}
+
+
+// Add this new function to handle clearing search input
+function clearSearchInputOnLoad() {
+    console.log('🔄 Clearing search input on page load...');
+    
+    // Clear the search input field
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        
+        // Also clear any search parameters from URL if present
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('q')) {
+            url.searchParams.delete('q');
+            window.history.replaceState({}, document.title, url.pathname);
+        }
+    }
+    
+    // Clear the clear button state
+    const clearBtn = document.querySelector('.clear-btn-clean');
+    if (clearBtn) {
+        clearBtn.style.opacity = '0';
+        clearBtn.style.visibility = 'hidden';
+    }
+}
+
 function initializeCleanSearch() {
     console.log('🔍 Initializing clean search (button only)...');
+    
+    // CLEAR SEARCH INPUT ON PAGE LOAD - ADD THIS LINE
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
     
     // Setup voice search
     setupVoiceSearchClean();
     
     // Add clear button functionality
-    const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         // Create clear button
         const clearBtn = document.createElement('button');
@@ -3140,9 +3180,21 @@ function initializeCleanSearch() {
     console.log('✅ Clean search initialized - Search only on button click');
 }
 
-// Test function to show it works
-function testSearch() {
-    console.log('Test: Typing in search box...');
-    console.log('This will NOT trigger search');
-    console.log('Only clicking the green search button will trigger search');
-}
+// Clear search on window load (for browser back button)
+window.addEventListener('load', function() {
+    console.log('📄 Page fully loaded - checking for search cleanup');
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value) {
+        console.log('🔄 Clearing persisted search input on page load');
+        searchInput.value = '';
+        
+        // Reset clear button
+        const clearBtn = document.querySelector('.clear-btn-clean');
+        if (clearBtn) {
+            clearBtn.style.opacity = '0';
+            clearBtn.style.visibility = 'hidden';
+        }
+    }
+});
+
+console.log('✅ Naidu Car Rentals Frontend loaded successfully!');
