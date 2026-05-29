@@ -591,7 +591,7 @@ function displayCustomers(users) {
     }
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const isPermanentAdmin = currentUser.email === 'ramanaidupalla359@gmail.com';
+    const isCurrentUserPermanent = isPermanentAdmin();
 
     container.innerHTML = `
         <div style="overflow-x: auto;">
@@ -643,7 +643,7 @@ function displayCustomers(users) {
                                     <button class="btn-view" onclick="viewCustomerDetails('${customer._id}')">
                                         <i class="fas fa-eye"></i> View Details
                                     </button>
-                                    ${isPermanentAdmin ? `
+                                    ${isCurrentUserPermanent ? `
                                         <button class="btn-toggle-availability" onclick="makeUserAdmin('${customer._id}', '${customer.name}')" style="margin-left: 0.5rem;">
                                             <i class="fas fa-user-shield"></i> Make Admin
                                         </button>
@@ -688,7 +688,7 @@ function displayCustomerDetails(user) {
     // Get user's bookings for detailed history
     loadCustomerBookings(user._id).then(bookings => {
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const isPermanentAdmin = currentUser.email === 'ramanaidupalla359@gmail.com';
+        const isCurrentUserPermanent = currentUser.email === 'ramanaidupalla359@gmail.com';
 
         content.innerHTML = `
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -745,7 +745,7 @@ function displayCustomerDetails(user) {
                         </div>
                     </div>
                     
-                    ${isPermanentAdmin ? `
+                    ${isCurrentUserPermanent ? `
                         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
                             <button class="btn btn-primary" onclick="makeUserAdmin('${user._id}', '${user.name}')" style="width: 100%;">
                                 <i class="fas fa-user-shield"></i> Make Admin
@@ -867,7 +867,8 @@ function isPermanentAdmin() {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const permanentAdmins = [
         'ramanaidupalla359@gmail.com',
-        'nleelasairamnakka@gmail.com'
+        'nleelasairamnakka@gmail.com',
+        'sreeja@gmail.com'
     ];
     return permanentAdmins.includes(currentUser.email);
 }
@@ -939,7 +940,8 @@ function displayAdmins(users) {
                     ${adminUsers.map(admin => {
                         const permanentAdmins = [
                             'ramanaidupalla359@gmail.com',
-                            'nleelasairamnakka@gmail.com'
+                            'nleelasairamnakka@gmail.com',
+                            'sreeja@gmail.com'
                         ];
                         const isPermanentAdminAccount = permanentAdmins.includes(admin.email);
                         return `
@@ -993,7 +995,7 @@ function displayAdmins(users) {
             </table>
         </div>
         <div style="padding: 1rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
-            Showing ${adminUsers.length} admin accounts • Permanent admins: ramanaidupalla359@gmail.com, nleelasairamnakka@gmail.com
+            Showing ${adminUsers.length} admin accounts • Permanent admins: ramanaidupalla359@gmail.com, nleelasairamnakka@gmail.com, 'sreeja@gmail.com'
         </div>
     `;
 }
