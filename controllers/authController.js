@@ -114,7 +114,8 @@ exports.login = async (req, res) => {
     // Additional admin check for specific emails
     const adminEmails = [
       'ramanaidupalla359@gmail.com',
-      'nleelasairamnakka@gmail.com'
+      'nleelasairamnakka@gmail.com',
+      'sreeja@gmail.com'
     ];
     
     const isFixedAdmin = adminEmails.includes(email.toLowerCase());
