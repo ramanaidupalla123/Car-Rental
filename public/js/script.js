@@ -2235,21 +2235,25 @@ function setupReviewsTabs() {
             
             if (websiteForm) {
                 websiteForm.classList.remove('active');
+                websiteForm.style.display = 'none';
                 console.log('🌐 Website form hidden');
             }
             if (carForm) {
                 carForm.classList.remove('active');
+                carForm.style.display = 'none';
                 console.log('🚗 Car form hidden');
             }
             
             if (type === 'website') {
                 if (websiteForm) {
                     websiteForm.classList.add('active');
+                    websiteForm.style.display = 'block';
                     console.log('✅ Website review form activated and visible');
                 }
             } else {
                 if (carForm) {
                     carForm.classList.add('active');
+                    carForm.style.display = 'block';
                     console.log('✅ Car review form activated and visible');
                     loadBookingsForReview();
                 }
@@ -2495,9 +2499,9 @@ function displayMyReviews(reviews) {
 function showSelectedCarInfo(car, bookingId) {
     console.log('🚗 Showing selected car info:', car.make, car.model);
     
-    const container = document.getElementById('selectedCarInfo');
+    const container = document.getElementById('selectedCarReviewInfo');
     if (!container) {
-        console.error('❌ selectedCarInfo container not found!');
+        console.error('❌ selectedCarReviewInfo container not found!');
         return;
     }
     
@@ -2648,15 +2652,15 @@ async function loadBookingsForReview() {
     console.log('📝 Loading bookings for review...');
     
     const select = document.getElementById('selectBooking');
-    const carForm = document.getElementById('carReviewForm');
+    const carFormElement = document.getElementById('carReviewFormElement');
     
-    if (!select || !carForm) {
+    if (!select || !carFormElement) {
         console.error('❌ Review form elements not found');
         return;
     }
     
     // Reset the form initially
-    carForm.style.display = 'none';
+    carFormElement.style.display = 'none';
     select.innerHTML = '<option value="">Select a booking to review...</option>';
     
     if (!currentUser) {
@@ -2683,7 +2687,7 @@ async function loadBookingsForReview() {
                         No completed bookings available for review
                     </option>
                 `;
-                document.getElementById('selectedCarInfo').innerHTML = `
+                document.getElementById('selectedCarReviewInfo').innerHTML = `
                     <div class="no-car-selected">
                         <i class="fas fa-calendar-check"></i>
                         <p>No completed bookings found</p>
@@ -2727,11 +2731,11 @@ async function loadBookingsForReview() {
                 if (selectedOption.value) {
                     const carData = JSON.parse(selectedOption.getAttribute('data-car'));
                     showSelectedCarInfo(carData, selectedOption.value);
-                    carForm.style.display = 'block';
+                    carFormElement.style.display = 'block';
                     resetStarRating('car');
                 } else {
-                    carForm.style.display = 'none';
-                    document.getElementById('selectedCarInfo').innerHTML = `
+                    carFormElement.style.display = 'none';
+                    document.getElementById('selectedCarReviewInfo').innerHTML = `
                         <div class="no-car-selected">
                             <i class="fas fa-car"></i>
                             <p>Please select a booking to review</p>
@@ -2887,8 +2891,14 @@ function showReviewForBooking(bookingId) {
     const websiteForm = document.getElementById('websiteReviewForm');
     const carForm = document.getElementById('carReviewForm');
     
-    if (websiteForm) websiteForm.classList.remove('active');
-    if (carForm) carForm.classList.add('active');
+    if (websiteForm) {
+        websiteForm.classList.remove('active');
+        websiteForm.style.display = 'none';
+    }
+    if (carForm) {
+        carForm.classList.add('active');
+        carForm.style.display = 'block';
+    }
     
     // Pre-select the booking in dropdown
     const select = document.getElementById('selectBooking');
@@ -3196,4 +3206,5 @@ window.addEventListener('load', function() {
         }
     }
 });
+
 console.log('✅ Naidu Car Rentals Frontend loaded successfully!');
