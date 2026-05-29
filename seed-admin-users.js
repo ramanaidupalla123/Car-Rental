@@ -37,6 +37,20 @@ const seedAdminUsers = async () => {
           country: 'India'
         },
         role: 'admin'
+      },
+      {
+        name: 'Sreeja',
+        email: 'sreeja@gmail.com',
+        password: 'sreeja1234', // Will be hashed automatically
+        phone: '+91-0000000000',
+        address: {
+          street: 'Default Street',
+          city: 'Jangareddygudem',
+          state: 'Andhra Pradesh',
+          zipCode: '534202',
+          country: 'India'
+        },
+        role: 'admin'
       }
     ];
 
