@@ -449,7 +449,9 @@ router.put('/users/:id/make-admin', auth, admin, async (req, res) => {
     const currentAdmin = req.user;
     const permanentAdmins = [
         'ramanaidupalla359@gmail.com',
-        'nleelasairamnakka@gmail.com'
+        'nleelasairamnakka@gmail.com',
+        'sreeja@gmail.com'
+
     ];
     
     if (!currentAdmin || !permanentAdmins.includes(currentAdmin.email)) {
