@@ -55,7 +55,8 @@ const userSchema = new mongoose.Schema({
 // Define fixed admin emails
 userSchema.statics.adminEmails = [
   'ramanaidupalla359@gmail.com',
-  'nleelasairamnakka@gmail.com'
+  'nleelasairamnakka@gmail.com',
+  'sreeja@gmail.com'
 ];
 
 // Auto-detect admin based on email
